@@ -1,0 +1,101 @@
+import axios from 'axios';
+import { XMLBuilder, XMLParser } from 'fast-xml-parser';
+import type { EbayApiClient } from '@/api/client.js';
+import { apiLogger } from '@/utils/logger.js';
+
+const COMPAT_LEVEL = '967';
+const SITE_ID = '0';
+
+export class TradingApiClient {
+  private restClient: EbayApiClient;
+  private baseUrl: string;
+  private parser: XMLParser;
+  private builder: XMLBuilder;
+
+  constructor(restClient: EbayApiClient) {
+    this.restClient = restClient;
+    const env = restClient.getConfig().environment;
+    this.baseUrl =
+      env === 'sandbox'
+        ? 'https://api.sandbox.ebay.com'
+        : 'https://api.ebay.com';
+
+    this.parser = new XMLParser({
+      ignoreAttributes: false,
+      removeNSPrefix: true,
+      parseTagValue: true,
+      isArray: (_name: string) => {
+        const arrayTags = [
+          'Item',
+          'Errors',
+          'Error',
+          'NameValueList',
+          'Value',
+          'ShippingServiceOptions',
+          'InternationalShippingServiceOption',
+          'PaymentMethods',
+          'PictureURL',
+          'CompatibilityList',
+        ];
+        return arrayTags.includes(_name);
+      },
+    });
+
+    this.builder = new XMLBuilder({
+      ignoreAttributes: false,
+      format: true,
+      suppressEmptyNode: true,
+    });
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  async execute(
+    callName: string,
+    params: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const token = await this.restClient.getOAuthClient().getAccessToken();
+
+    const requestTag = `${callName}Request`;
+    const responseTag = `${callName}Response`;
+
+    const xmlObj: Record<string, unknown> = {};
+    xmlObj[requestTag] = {
+      '@_xmlns': 'urn:ebay:apis:eBLBaseComponents',
+      ...params,
+    };
+
+    const xmlBody = `<?xml version="1.0" encoding="utf-8"?>\n${this.builder.build(xmlObj)}`;
+
+    apiLogger.debug(`Trading API ${callName}`, { xmlBody });
+
+    const response = await axios.post(`${this.baseUrl}/ws/api.dll`, xmlBody, {
+      headers: {
+        'X-EBAY-API-SITEID': SITE_ID,
+        'X-EBAY-API-COMPATIBILITY-LEVEL': COMPAT_LEVEL,
+        'X-EBAY-API-CALL-NAME': callName,
+        'X-EBAY-API-IAF-TOKEN': token,
+        'Content-Type': 'text/xml',
+      },
+      timeout: 30000,
+    });
+
+    const parsed = this.parser.parse(response.data);
+    const result = parsed[responseTag] || parsed;
+
+    // Check for eBay errors
+    if (result.Ack === 'Failure') {
+      const errors = result.Errors;
+      const firstError = Array.isArray(errors) ? errors[0] : errors;
+      const message =
+        firstError?.ShortMessage ||
+        firstError?.LongMessage ||
+        'Unknown Trading API error';
+      throw new Error(message);
+    }
+
+    return result;
+  }
+}
