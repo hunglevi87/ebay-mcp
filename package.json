@@ -43,7 +43,9 @@
     "build/index.d.ts",
     "build/server-http.d.ts",
     "public/icons/*.png",
-    "README.md"
+    "README.md",
+    "docs/auth/production_scopes.json",
+    "docs/auth/sandbox_scopes.json"
   ],
   "repository": {
     "type": "git",

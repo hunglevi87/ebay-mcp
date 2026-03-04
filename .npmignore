@@ -3,6 +3,8 @@ src/
 tests/
 scripts/
 docs/
+!docs/auth/production_scopes.json
+!docs/auth/sandbox_scopes.json
 
 # Configuration files
 tsconfig.json
