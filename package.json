@@ -17,6 +17,7 @@
     "setup": "tsx src/scripts/setup.ts",
     "sync": "tsx src/scripts/dev-sync.ts",
     "diagnose": "tsx src/scripts/diagnostics.ts",
+    "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit && eslint . && prettier --check \"src/**/*.{ts,js,json,md}\"",
     "fix": "eslint . --fix && prettier --write \"src/**/*.{ts,js,json,md}\"",
     "prepare": "npm run build"
