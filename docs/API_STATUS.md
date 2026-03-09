@@ -3,10 +3,11 @@
 Auto-updated snapshot from the [eBay API Status RSS feed](https://developer.ebay.com/rss/api-status).
 Full list: [developer.ebay.com/support/api-status](https://developer.ebay.com/support/api-status).
 
-*Last updated: 2026-03-02T08:54:54.940Z*
+*Last updated: 2026-03-09T08:54:46.849Z*
 
 | Title | API | Site | Status | Last updated | Link |
 |-------|-----|------|--------|--------------|------|
+| Sandbox | Sandbox | Sandbox | Resolved | Tue Mar 03 2026 | [Details](https://developer.ebay.com/support/api-status/Sandbox/application-keyset-page-is-not-displaying-the-existing-sandbox-keyset) |
 | Trading API | Trading API | Production | Resolved | Mon Feb 09 2026 | [Details](https://developer.ebay.com/support/api-status/Production/resolved-addorder-trading-api-returns-http-500-during-invoice-generation-blocking-invoicing) |
 | Developer portal | Developer portal | Production | Resolved | Thu Feb 05 2026 | [Details](https://developer.ebay.com/support/api-status/Production/application-keysets-page-not-showing-production-keyset-and-create-new-keyset-is-not-working) |
 | Marketing API | Marketing API | Production | Resolved | Wed Jan 28 2026 | [Details](https://developer.ebay.com/support/api-status/Production/internal-server-error-bulkcreateadsbylistingid) |
@@ -21,7 +22,6 @@ Full list: [developer.ebay.com/support/api-status](https://developer.ebay.com/su
 | AddMemberMessageRTQ  AddMemberMessageAAQToPartner APIs | AddMemberMessageRTQ  AddMemberMessageAAQToPartner APIs | Production | Resolved | Tue Sep 23 2025 | [Details](https://developer.ebay.com/support/api-status/Production/resolved-discrepancies-in-newline-character-display-between-messages-on-ui-and-email-content) |
 | Sandbox | Sandbox | Sandbox | Resolved | Fri Sep 19 2025 | [Details](https://developer.ebay.com/support/api-status/Sandbox/resolved-sandbox-user-creation-issue) |
 | createShippingFulfillment | createShippingFulfillment | Production | Resolved | Fri Sep 19 2025 | [Details](https://developer.ebay.com/support/api-status/Production/resolved-createshippingfulfillment-api-is-currently-not-working-and-is-returning-400-response) |
-| Buy Feed API | Buy Feed API | Production | Resolved | Fri Sep 05 2025 | [Details](https://developer.ebay.com/support/api-status/Production/resolved-category-hourly-feed-files-are-missing) |
 
 ---
 
