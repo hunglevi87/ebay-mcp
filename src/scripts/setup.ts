@@ -496,7 +496,8 @@ export async function runSetup(): Promise<void> {
   const args = parseArgs();
 
   console.log(LOGO);
-  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag\n'));
+  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag'));
+  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('grimoire-wizard') + '\n');
 
   console.log(ui.dim('  Welcome to the eBay MCP Server setup wizard!\n'));
   console.log('  This wizard will help you:\n');
@@ -924,9 +925,10 @@ export async function runSetup(): Promise<void> {
   showSuccess('Configuration saved to .env\n');
 
   console.log(LOGO);
-  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag\n'));
-  console.log(ui.bold.green('\n  🎉 Setup Complete!\n'));
+  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag'));
+  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('grimoire-wizard') + '\n');
 
+  console.log(ui.bold.green('\n  🎉 Setup Complete!\n'));
   showBox('Configuration Summary', [
     `Environment:     ${environment}`,
     `Marketplace ID:  ${finalConfig.EBAY_MARKETPLACE_ID || 'Not set'}`,
