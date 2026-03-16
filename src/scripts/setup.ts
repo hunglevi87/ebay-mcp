@@ -50,6 +50,22 @@ const CONTENT_LANGUAGE_OPTIONS: { value: string; label: string }[] = [
   { value: 'nl-BE', label: 'nl-BE — Dutch (Belgium)' },
 ];
 
+const ebay = {
+  red: chalk.hex('#E53238'),
+  blue: chalk.hex('#0064D2'),
+  yellow: chalk.hex('#F5AF02'),
+  green: chalk.hex('#86B817'),
+};
+
+const LOGO = `
+   ${ebay.red('███████╗')}${ebay.blue('██████╗ ')}${ebay.yellow('█████╗ ')}${ebay.green('██╗   ██╗')}
+   ${ebay.red('██╔════╝')}${ebay.blue('██╔══██╗')}${ebay.yellow('██╔══██╗')}${ebay.green('╚██╗ ██╔╝')}
+   ${ebay.red('█████╗  ')}${ebay.blue('██████╔╝')}${ebay.yellow('███████║')}${ebay.green(' ╚████╔╝ ')}
+   ${ebay.red('██╔══╝  ')}${ebay.blue('██╔══██╗')}${ebay.yellow('██╔══██║')}${ebay.green('  ╚██╔╝  ')}
+   ${ebay.red('███████╗')}${ebay.blue('██████╔╝')}${ebay.yellow('██║  ██║')}${ebay.green('   ██║   ')}
+   ${ebay.red('╚══════╝')}${ebay.blue('╚═════╝ ')}${ebay.yellow('╚═╝  ╚═╝')}${ebay.green('   ╚═╝   ')}
+`;
+
 const ui = {
   dim: chalk.dim,
   bold: chalk.bold,
@@ -420,6 +436,17 @@ function showError(message: string): void {
   console.log(`  ${ui.error('✗')} ${message}`);
 }
 
+function showBox(title: string, content: string[]): void {
+  const width = 54;
+  const line = '─'.repeat(width);
+  console.log(`  ${ui.dim('┌─')} ${ui.bold(title)} ${ui.dim('─'.repeat(width - title.length - 2))}┐`);
+  for (const item of content) {
+    const displayItem = item.length > width - 2 ? item.slice(0, width - 5) + '...' : item;
+    console.log(`  ${ui.dim('│')} ${displayItem.padEnd(width)}${ui.dim('│')}`);
+  }
+  console.log(`  ${ui.dim('└' + line + '┘')}\n`);
+}
+
 function showSpinner(message: string): () => void {
   const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   let i = 0;
@@ -474,12 +501,29 @@ export async function runSetup(): Promise<void> {
 
   const finalStepId = availableClients.length > 0 ? 'mcp-clients' : 'no-mcp-clients';
 
+  const args = parseArgs();
+
+  console.log(LOGO);
+  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag\n'));
+
+  console.log(ui.dim('  Welcome to the eBay MCP Server setup wizard!\n'));
+  console.log('  This wizard will help you:\n');
+  console.log(`    ${ui.success('1.')} Choose environment (sandbox/production)`);
+  console.log(`    ${ui.success('2.')} Set default marketplace and language (optional)`);
+  console.log(`    ${ui.success('3.')} Configure your eBay Developer credentials`);
+  console.log(`    ${ui.success('4.')} Set up OAuth authentication`);
+  console.log(`    ${ui.success('5.')} Configure your MCP client (Claude, Cline, etc.)`);
+  console.log(`    ${ui.success('6.')} Validate your setup\n`);
+
+  if (Object.keys(existingConfig).length > 0) {
+    showInfo('Existing configuration detected. You can update or keep current values.');
+    console.log('');
+  }
+
   const wizardConfig = defineWizard({
     meta: {
       name: 'eBay MCP',
       description: 'Server Setup Wizard — powered by grimoire',
-      icon: '🛒',
-      banner: 'eBay MCP',
     },
     theme: {
       tokens: {
@@ -555,7 +599,10 @@ export async function runSetup(): Promise<void> {
         id: 'client-secret',
         type: 'password',
         message: 'Client Secret (Cert ID):',
-        validate: [{ rule: 'required' }],
+        description: existingConfig.EBAY_CLIENT_SECRET
+          ? 'Press Enter to keep existing secret'
+          : 'From https://developer.ebay.com/my/keys',
+        required: existingConfig.EBAY_CLIENT_SECRET ? false : true,
       },
       {
         id: 'redirect-uri',
@@ -619,6 +666,7 @@ export async function runSetup(): Promise<void> {
 
   const answers = await runWizard(wizardConfig, {
     renderer: new ClackRenderer(),
+    quiet: true,
 
     optionsProvider: async (stepId) => {
       if (stepId === 'oauth-method') {
@@ -656,6 +704,11 @@ export async function runSetup(): Promise<void> {
       const clientId = a['client-id'] as string;
       const clientSecret = a['client-secret'] as string;
       const redirectUri = a['redirect-uri'] as string;
+
+      if (stepId === 'environment' && args.quick) {
+        showInfo('Quick setup enabled — skipping optional marketplace configuration.');
+        context.setNextStep('client-id');
+      }
 
       // ── oauth-method: dispatch to correct sub-flow ─────────────────────────
       if (stepId === 'oauth-method') {
@@ -858,7 +911,7 @@ export async function runSetup(): Promise<void> {
 
   const finalConfig: Record<string, string> = {
     EBAY_CLIENT_ID: answers['client-id'] as string,
-    EBAY_CLIENT_SECRET: answers['client-secret'] as string,
+    EBAY_CLIENT_SECRET: (answers['client-secret'] as string) || existingConfig.EBAY_CLIENT_SECRET || '',
     EBAY_REDIRECT_URI: answers['redirect-uri'] as string,
     EBAY_ENVIRONMENT: environment,
     ...(marketplaceId ? { EBAY_MARKETPLACE_ID: marketplaceId } : {}),
@@ -876,22 +929,37 @@ export async function runSetup(): Promise<void> {
   await new Promise((r) => setTimeout(r, 300));
   saveConfig(finalConfig, environment);
   stopSave();
+  showSuccess('Configuration saved to .env\n');
 
+  console.log(LOGO);
+  console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag\n'));
   console.log(ui.bold.green('\n  🎉 Setup Complete!\n'));
-  console.log(`  ${ui.dim('Environment:')}    ${environment}`);
-  console.log(`  ${ui.dim('Client ID:')}      ${(finalConfig.EBAY_CLIENT_ID || '').slice(0, 20)}...`);
-  console.log(
-    `  ${ui.dim('OAuth Token:')}    ${finalConfig.EBAY_USER_REFRESH_TOKEN ? ui.success('✓ configured') : ui.warning('✗ not set')}`,
-  );
-  console.log(
-    `  ${ui.dim('Rate Limit:')}     ${finalConfig.EBAY_USER_REFRESH_TOKEN ? '10,000–50,000 req/day' : '1,000 req/day'}`,
-  );
-  console.log('');
-  console.log(`  ${ui.bold('Start server:')}   ${ui.info('npm start')}`);
-  console.log(`  ${ui.bold('Diagnostics:')}    ${ui.info('npm run diagnose')}`);
-  console.log(`  ${ui.bold('Run tests:')}      ${ui.info('npm test')}`);
-  console.log('');
-  console.log(`  ${ui.dim('Restart your MCP client to apply changes.')}\n`);
+
+  showBox('Configuration Summary', [
+    `Environment:     ${environment}`,
+    `Marketplace ID:  ${finalConfig.EBAY_MARKETPLACE_ID || 'Not set'}`,
+    `Content-Lang:    ${finalConfig.EBAY_CONTENT_LANGUAGE || 'Not set'}`,
+    `Client ID:       ${(finalConfig.EBAY_CLIENT_ID || '').slice(0, 20)}...`,
+    `Redirect URI:    ${(finalConfig.EBAY_REDIRECT_URI || '').slice(0, 30)}...`,
+    `OAuth Token:     ${finalConfig.EBAY_USER_REFRESH_TOKEN ? '✓ Configured' : '✗ Not set'}`,
+    `Rate Limit:      ${finalConfig.EBAY_USER_REFRESH_TOKEN ? '10k-50k/day' : '1k/day'}`,
+  ]);
+
+  console.log(ui.bold.cyan('\n  📋 Quick Reference\n'));
+  console.log('  ' + ui.dim('─'.repeat(56)));
+  console.log(`  ${ui.bold('Start MCP Server:')}     ${ui.info('npm start')}`);
+  console.log(`  ${ui.bold('Run Diagnostics:')}      ${ui.info('npm run diagnose')}`);
+  console.log(`  ${ui.bold('View Logs:')}            ${ui.info('npm run dev')}`);
+  console.log(`  ${ui.bold('Run Tests:')}            ${ui.info('npm test')}`);
+  console.log('  ' + ui.dim('─'.repeat(56)));
+
+  console.log(ui.bold.cyan('\n  🚀 Next Steps\n'));
+  console.log('  1. Restart your MCP client (Claude Desktop, etc.)');
+  console.log('  2. The eBay server should appear in available tools');
+  console.log('  3. Try: "Show my eBay seller information"\n');
+
+  console.log(ui.dim('  Documentation: ') + ui.info('https://github.com/YosefHayim/ebay-mcp'));
+  console.log(ui.dim('  Get Help:      ') + ui.info('https://github.com/YosefHayim/ebay-mcp/issues\n'));
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
