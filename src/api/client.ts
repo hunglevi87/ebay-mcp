@@ -54,6 +54,26 @@ export class EbayApiClient {
   private rateLimitTracker: RateLimitTracker;
   private config: EbayConfig;
 
+  /**
+   * Build default request headers based on configured marketplace and language.
+   */
+  private getDefaultHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+
+    if (this.config.contentLanguage) {
+      headers['Content-Language'] = this.config.contentLanguage;
+    }
+
+    if (this.config.marketplaceId) {
+      headers['X-EBAY-C-MARKETPLACE-ID'] = this.config.marketplaceId;
+    }
+
+    return headers;
+  }
+
   constructor(config: EbayConfig) {
     this.config = config;
     this.authClient = new EbayOAuthClient(config);
@@ -63,10 +83,7 @@ export class EbayApiClient {
     this.httpClient = axios.create({
       baseURL: this.baseUrl,
       timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: this.getDefaultHeaders(),
     });
 
     // Add request interceptor to inject auth token and check rate limits
@@ -96,7 +113,7 @@ export class EbayApiClient {
 
         return config;
       },
-      (error) => {
+      (error: Error) => {
         apiLogger.error('Request interceptor error', { error: error.message });
         return Promise.reject(error);
       }
@@ -110,13 +127,7 @@ export class EbayApiClient {
         const limit = response.headers['x-ebay-c-ratelimit-limit'];
 
         // Log response details
-        logResponse(
-          response.status,
-          response.statusText,
-          response.data,
-          remaining,
-          limit
-        );
+        logResponse(response.status, response.statusText, response.data, remaining, limit);
 
         return response;
       },
@@ -221,7 +232,9 @@ export class EbayApiClient {
               delayMs: Math.min(delay, 5000),
             });
 
-            await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 5000)));
+            await new Promise<void>((resolve) => {
+              setTimeout(resolve, Math.min(delay, 5000));
+            });
             return await this.httpClient.request(config);
           }
         }
@@ -245,9 +258,9 @@ export class EbayApiClient {
    * Validate that access token is available before making API request
    */
   private validateAccessToken(): void {
-    if (!this.authClient.hasUserTokens()) {
+    if (!this.config.clientId || !this.config.clientSecret) {
       throw new Error(
-        'Access token is missing. Please provide your access token and refresh token by calling ebay_set_user_tokens tool in order to perform API requests.'
+        'Missing required eBay credentials. Please set EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in your .env file.'
       );
     }
   }
@@ -324,8 +337,13 @@ export class EbayApiClient {
   /**
    * Set user access and refresh tokens
    */
-  async setUserTokens(accessToken: string, refreshToken: string): Promise<void> {
-    await this.authClient.setUserTokens(accessToken, refreshToken);
+  async setUserTokens(
+    accessToken: string,
+    refreshToken: string,
+    accessTokenExpiry?: number,
+    refreshTokenExpiry?: number
+  ): Promise<void> {
+    this.authClient.setUserTokens(accessToken, refreshToken, accessTokenExpiry, refreshTokenExpiry);
   }
 
   /**
@@ -392,8 +410,7 @@ export class EbayApiClient {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          ...this.getDefaultHeaders(),
         },
         timeout: 30000,
       });
@@ -401,7 +418,9 @@ export class EbayApiClient {
     } catch (error) {
       // Handle 401 authentication errors with automatic token refresh
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        apiLogger.warn('Authentication error (401) on full URL request. Attempting to refresh user token...');
+        apiLogger.warn(
+          'Authentication error (401) on full URL request. Attempting to refresh user token...'
+        );
 
         try {
           // Refresh the token
@@ -417,8 +436,7 @@ export class EbayApiClient {
             params,
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
+              ...this.getDefaultHeaders(),
             },
             timeout: 30000,
           });

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthUrl, getBaseUrl, getDefaultScopes } from '@/config/environment.js';
+import { getBaseUrl, getDefaultScopes } from '@/config/environment.js';
 import type {
   EbayAppAccessTokenResponse,
   EbayConfig,
@@ -7,40 +7,34 @@ import type {
   StoredTokenData,
 } from '@/types/ebay.js';
 import { LocaleEnum } from '@/types/ebay-enums.js';
-import { readFileSync, writeFileSync } from 'fs';
+import dotenv from 'dotenv';
+import stringify from 'dotenv-stringify';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { authLogger } from '@/utils/logger.js';
 
 /**
  * Update .env file with new token values
  */
-function updateEnvFile(updates: { [key: string]: string }): void {
+function updateEnvFile(updates: Record<string, string>): void {
   try {
     const envPath = join(process.cwd(), '.env');
-    let envContent = readFileSync(envPath, 'utf-8');
+    const existingEnv = existsSync(envPath) ? dotenv.parse(readFileSync(envPath, 'utf-8')) : {};
 
-    // Update each key-value pair
-    for (const [key, value] of Object.entries(updates)) {
-      // Match the key with or without value, handling comments
-      const regex = new RegExp(`^(#\\s*)?${key}=.*$`, 'gm');
-      const newLine = `${key}=${value}`;
+    // Merge new updates into existing environment object
+    const mergedEnv = { ...existingEnv, ...updates };
 
-      if (regex.test(envContent)) {
-        // Update existing key (uncomment if needed)
-        envContent = envContent.replace(regex, newLine);
-      } else {
-        // Add new key at the end
-        envContent += `\n${newLine}`;
-      }
-    }
+    // Securely stringify the merged environment object
+    const safeEnvContent = stringify(mergedEnv);
 
-    writeFileSync(envPath, envContent, 'utf-8');
-    // Tokens updated silently - console output interferes with MCP JSON protocol
-  } catch (error) {
+    // Write the updated content back to the .env file
+    writeFileSync(envPath, safeEnvContent, 'utf-8');
+  } catch (_error) {
     // Silent failure - error logging interferes with MCP JSON protocol
     // If needed, check .env file manually
   }
 }
+
 
 /**
  * Manages eBay OAuth 2.0 authentication
@@ -206,7 +200,7 @@ export class EbayOAuthClient {
    */
   async getOrRefreshAppAccessToken(): Promise<string> {
     // Return cached token if still valid
-    if (this.appAccessToken) {
+    if (this.appAccessToken && Date.now() < this.appAccessTokenExpiry) {
       return this.appAccessToken;
     }
 
@@ -365,7 +359,7 @@ export class EbayOAuthClient {
       };
 
       // Update .env file with new tokens
-      const envUpdates: { [key: string]: string } = {
+      const envUpdates: Record<string, string> = {
         EBAY_USER_ACCESS_TOKEN: tokenData.access_token,
       };
 

@@ -7,11 +7,12 @@
 [![Tests](https://img.shields.io/badge/tests-958%20passing-brightgreen)](tests/)
 [![API Coverage](https://img.shields.io/badge/API%20coverage-100%25-success)](src/tools/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Contributors Welcome](https://img.shields.io/badge/contributors-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/yosefhayim-ebay-api-mcp-server-badge.png)](https://mseep.ai/app/yosefhayim-ebay-api-mcp-server)
 <a href="https://www.buymeacoffee.com/yosefhayim" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server providing AI assistants with comprehensive access to eBay's Sell APIs. Includes **387 tools** for inventory management, order fulfillment, marketing campaigns, analytics, developer tools, and more.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server providing AI assistants with comprehensive access to eBay's Sell APIs. Includes **325 tools** for inventory management, order fulfillment, marketing campaigns, analytics, developer tools, and more.
 
 **API Coverage:** 100% (270 unique eBay API endpoints)
 
@@ -113,7 +114,7 @@ For official eBay API support, please refer to the [eBay Developer Program](http
 
 ## Features
 
-- **387 eBay API Tools** - 100% coverage of eBay Sell APIs across inventory, orders, marketing, analytics, developer tools, and more
+- **325 eBay API Tools** - 100% coverage of eBay Sell APIs across inventory, orders, marketing, analytics, developer tools, and more
 - **9 AI Clients Supported** - Auto-configuration for Claude Desktop, Cursor, Zed, Cline, Continue.dev, Windsurf, Roo Code, Claude Code CLI, and Amazon Q
 - **OAuth 2.0 Support** - Full user token management with automatic refresh
 - **Type Safety** - Built with TypeScript, Zod validation, and OpenAPI-generated types
@@ -223,6 +224,8 @@ EBAY_CLIENT_ID=your_client_id
 EBAY_CLIENT_SECRET=your_client_secret
 EBAY_ENVIRONMENT=sandbox  # or "production"
 EBAY_REDIRECT_URI=your_runame
+EBAY_MARKETPLACE_ID=EBAY_US  # Default marketplace (overridable by many tools)
+EBAY_CONTENT_LANGUAGE=en-US  # Default request content language (global)
 EBAY_USER_REFRESH_TOKEN=your_refresh_token  # For higher rate limits
 ```
 
@@ -260,7 +263,7 @@ This server supports **9 AI clients** with auto-configuration via `npm run setup
 
 ```bash
 npm install -g ebay-mcp
-npx ebay-mcp  # Interactive setup wizard - auto-detects installed clients
+npx ebay-mcp setup  # Interactive setup wizard - auto-detects installed clients
 ```
 
 The setup wizard will automatically detect which AI clients you have installed and configure them for you.
@@ -310,7 +313,7 @@ Monitor your API usage in the [eBay Developer Portal](https://developer.ebay.com
 
 ## Available Tools
 
-The server provides **387 tools** with **100% API coverage** organized into the following categories:
+The server provides **325 tools** with **100% API coverage** organized into the following categories:
 
 - **Account Management** - Policies, programs, subscriptions, sales tax
 - **Inventory Management** - Items, offers, locations, bulk operations, SKU location mapping
@@ -564,7 +567,7 @@ Log files are stored in `~/.ebay-mcp/logs/`:
 
 1. Verify you're using the correct environment (sandbox vs production)
 2. Ensure you have proper permissions/scopes for the operation
-3. Check eBay API status: https://developer.ebay.com/support/api-status
+3. Check current API status with the `ebay_get_api_status` tool or the [eBay API Status](https://developer.ebay.com/support/api-status) page
 4. Run `npm run diagnose` to check your configuration
 5. Review the [eBay API documentation](https://developer.ebay.com/docs) for endpoint requirements
 
@@ -593,8 +596,7 @@ The diagnostic tool checks:
 If you're still experiencing issues:
 
 1. Check existing [GitHub Issues](https://github.com/YosefHayim/ebay-mcp/issues)
-2. Review [GitHub Discussions](https://github.com/YosefHayim/ebay-mcp/discussions)
-3. Create a new issue with:
+2. Create a new issue with:
    - Your diagnostic report (`npm run diagnose:export`)
    - Steps to reproduce the problem
    - Error messages or logs
@@ -602,12 +604,20 @@ If you're still experiencing issues:
 
 ## Resources
 
+### API Status
+
+Check current eBay API health, incidents, and fixes:
+
+- [eBay API Status](https://developer.ebay.com/support/api-status) - Official status page
+- [API Status RSS feed](https://developer.ebay.com/rss/api-status) - Latest issues and resolutions (XML)
+- **`ebay_get_api_status`** - MCP tool that returns the latest items from this feed (filter by status or API name, optional limit)
+- [Latest snapshot (auto-updated)](docs/API_STATUS.md) - In-repo digest of recent status items
+
 ### Documentation
 
 - [eBay Developer Portal](https://developer.ebay.com/) - API documentation and credentials
 - [eBay API License Agreement](https://developer.ebay.com/join/api-license-agreement) - Terms of use and compliance requirements
 - [eBay Data Handling Requirements](https://developer.ebay.com/api-docs/static/data-handling-update.html) - Important data protection and privacy guidelines
-- [eBay API Status](https://developer.ebay.com/support/api-status) - Real-time API health and status
 - [MCP Documentation](https://modelcontextprotocol.io/) - Model Context Protocol specification
 - [OAuth Quick Reference](docs/auth/OAUTH_QUICK_REFERENCE.md) - **Complete OAuth authentication guide with scopes, troubleshooting, and examples**
 - [OAuth Setup Guide](docs/auth/) - Detailed authentication configuration
@@ -618,7 +628,6 @@ If you're still experiencing issues:
 
 ### Support
 
-- [GitHub Discussions](https://github.com/YosefHayim/ebay-mcp/discussions) - Community Q&A and general discussions
 - [Issue Tracker](https://github.com/YosefHayim/ebay-mcp/issues) - Bug reports and feature requests
 - [Bug Report Template](BUG_REPORT.md) - Detailed bug reporting guide
 

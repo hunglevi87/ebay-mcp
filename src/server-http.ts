@@ -13,6 +13,8 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
@@ -26,6 +28,7 @@ import { getToolDefinitions, executeTool } from '@/tools/index.js';
 import { TokenVerifier } from '@/auth/token-verifier.js';
 import { createBearerAuthMiddleware } from '@/auth/oauth-middleware.js';
 import { createMetadataRouter, getProtectedResourceMetadataUrl } from '@/auth/oauth-metadata.js';
+import { getVersion } from '@/utils/version.js';
 
 // Configuration from environment
 const CONFIG = {
@@ -77,6 +80,9 @@ function getAuthServerMetadataUrl(): string {
  */
 async function createApp(): Promise<express.Application> {
   const app = express();
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const projectRoot = join(__dirname, '..');
 
   // Enable CORS
   app.use(
@@ -107,6 +113,10 @@ async function createApp(): Promise<express.Application> {
 
   // Server URL
   const serverUrl = `http://${CONFIG.host}:${CONFIG.port}`;
+  const iconBaseUrl = `${serverUrl}/icons`;
+
+  // Static assets (icons)
+  app.use('/icons', express.static(join(projectRoot, 'public', 'icons')));
 
   // Get eBay configuration for metadata
   const ebayConfig = getEbayConfig();
@@ -172,48 +182,55 @@ async function createApp(): Promise<express.Application> {
   /**
    * Create a new MCP server instance
    */
-  function createMcpServer(): McpServer {
+  async function createMcpServer(): Promise<McpServer> {
     const ebayConfig = getEbayConfig();
     const api = new EbaySellerApi(ebayConfig);
+    try {
+      await api.initialize();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Failed to initialize eBay API client: ${message}`);
+      throw error;
+    }
 
     const server = new McpServer({
       name: 'ebay-mcp',
-      version: '1.4.0',
+      version: getVersion(),
       title: 'eBay API MCP Server',
-      websiteUrl: 'https://coming-soon.com',
+      websiteUrl: 'https://github.com/YosefHayim/ebay-mcp',
       icons: [
         {
-          src: './icons/16x16.png',
+          src: `${iconBaseUrl}/16x16.png`,
           mimeType: 'image/png',
           sizes: ['16x16'],
         },
         {
-          src: './icons/32x32.png',
+          src: `${iconBaseUrl}/32x32.png`,
           mimeType: 'image/png',
           sizes: ['32x32'],
         },
         {
-          src: './icons/48x48.png',
+          src: `${iconBaseUrl}/48x48.png`,
           mimeType: 'image/png',
           sizes: ['48x48'],
         },
         {
-          src: './icons/128x128.png',
+          src: `${iconBaseUrl}/128x128.png`,
           mimeType: 'image/png',
           sizes: ['128x128'],
         },
         {
-          src: './icons/256x256.png',
+          src: `${iconBaseUrl}/256x256.png`,
           mimeType: 'image/png',
           sizes: ['256x256'],
         },
         {
-          src: './icons/512x512.png',
+          src: `${iconBaseUrl}/512x512.png`,
           mimeType: 'image/png',
           sizes: ['512x512'],
         },
         {
-          src: './icons/1024x1024.png',
+          src: `${iconBaseUrl}/1024x1024.png`,
           mimeType: 'image/png',
           sizes: ['1024x1024'],
         },
@@ -288,7 +305,7 @@ async function createApp(): Promise<express.Application> {
         }
       };
 
-      const server = createMcpServer();
+      const server = await createMcpServer();
       await server.connect(transport);
     } else {
       res.status(400).json({
@@ -400,7 +417,7 @@ async function main() {
         console.log('Clients must provide valid Bearer tokens to access MCP endpoints');
       } else {
         console.log('Authorization is DISABLED');
-        console.log('Set OAUTH_ENABLED=true to enable OAuth protection');
+        console.log('Set OAUTH_ENABLED=true (or remove OAUTH_ENABLED=false) to enable OAuth protection');
       }
     });
 
@@ -419,6 +436,8 @@ async function main() {
 }
 
 // Start server if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const entryPath = process.argv[1] ? resolve(process.argv[1]) : undefined;
+const modulePath = resolve(fileURLToPath(import.meta.url));
+if (entryPath && modulePath === entryPath) {
   await main();
 }

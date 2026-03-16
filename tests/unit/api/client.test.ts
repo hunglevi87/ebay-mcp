@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import nock from 'nock';
 import { EbayApiClient } from '@/api/client.js';
+import { getEbayConfig } from '@/config/environment.js';
 import type { EbayConfig } from '@/types/ebay.js';
+import { apiLogger } from '@/utils/logger.js';
 
 // Mock EbayOAuthClient
 const mockOAuthClient = {
@@ -93,6 +95,62 @@ describe('EbayApiClient Unit Tests', () => {
     });
   });
 
+  describe('Default marketplace and language headers', () => {
+    it('should include EBAY_US and en-US headers by default', async () => {
+      const originalEnv = process.env;
+      process.env = { ...originalEnv };
+
+      try {
+        process.env.EBAY_CLIENT_ID = 'test_client_id';
+        process.env.EBAY_CLIENT_SECRET = 'test_client_secret';
+        delete process.env.EBAY_MARKETPLACE_ID;
+        delete process.env.EBAY_CONTENT_LANGUAGE;
+        process.env.EBAY_ENVIRONMENT = 'sandbox';
+
+        const defaultClient = new EbayApiClient(getEbayConfig());
+        await defaultClient.initialize();
+
+        nock('https://api.sandbox.ebay.com', {
+          reqheaders: {
+            'x-ebay-c-marketplace-id': 'EBAY_US',
+            'content-language': 'en-US',
+          },
+        })
+          .get('/sell/inventory/v1/test')
+          .reply(200, { success: true });
+
+        const result = await defaultClient.get('/sell/inventory/v1/test');
+        expect(result).toEqual({ success: true });
+      } finally {
+        process.env = originalEnv;
+      }
+    });
+
+    it('should override headers when config provides values', async () => {
+      const customClient = new EbayApiClient({
+        clientId: 'test_client_id',
+        clientSecret: 'test_client_secret',
+        environment: 'sandbox',
+        redirectUri: 'https://localhost/callback',
+        marketplaceId: 'EBAY_DE',
+        contentLanguage: 'de-DE',
+      });
+      await customClient.initialize();
+
+      nock('https://api.sandbox.ebay.com', {
+        reqheaders: {
+          'x-ebay-c-marketplace-id': 'EBAY_DE',
+          'content-language': 'de-DE',
+        },
+      })
+        .get('/sell/inventory/v1/test')
+        .reply(200, { success: true });
+
+      const result = await customClient.get('/sell/inventory/v1/test');
+      expect(result).toEqual({ success: true });
+    });
+  });
+
   describe('429 Rate Limit Errors', () => {
     it('should handle 429 errors with Retry-After header', async () => {
       nock('https://api.sandbox.ebay.com')
@@ -117,7 +175,7 @@ describe('EbayApiClient Unit Tests', () => {
 
   describe('Server Error Retry Logic', () => {
     it('should retry on 500 errors with exponential backoff', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiErrorSpy = vi.spyOn(apiLogger, 'error').mockImplementation(() => {});
 
       // First two attempts fail with 500
       nock('https://api.sandbox.ebay.com')
@@ -136,13 +194,13 @@ describe('EbayApiClient Unit Tests', () => {
       const result = await apiClient.get('/sell/inventory/v1/test');
 
       expect(result).toEqual({ success: true });
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(apiErrorSpy).toHaveBeenCalled();
 
-      consoleErrorSpy.mockRestore();
+      apiErrorSpy.mockRestore();
     }, 10000);
 
     it('should give up after 3 retry attempts', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiErrorSpy = vi.spyOn(apiLogger, 'error').mockImplementation(() => {});
 
       // All 4 attempts fail (original + 3 retries)
       for (let i = 0; i < 4; i++) {
@@ -153,11 +211,11 @@ describe('EbayApiClient Unit Tests', () => {
 
       await expect(apiClient.get('/sell/inventory/v1/test')).rejects.toThrow();
 
-      consoleErrorSpy.mockRestore();
+      apiErrorSpy.mockRestore();
     }, 15000);
 
     it('should retry on 502 errors', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiErrorSpy = vi.spyOn(apiLogger, 'error').mockImplementation(() => {});
 
       nock('https://api.sandbox.ebay.com')
         .get('/sell/inventory/v1/test')
@@ -170,11 +228,11 @@ describe('EbayApiClient Unit Tests', () => {
       const result = await apiClient.get('/sell/inventory/v1/test');
       expect(result).toEqual({ success: true });
 
-      consoleErrorSpy.mockRestore();
+      apiErrorSpy.mockRestore();
     }, 10000);
 
     it('should retry on 503 errors', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiErrorSpy = vi.spyOn(apiLogger, 'error').mockImplementation(() => {});
 
       nock('https://api.sandbox.ebay.com')
         .get('/sell/inventory/v1/test')
@@ -187,11 +245,11 @@ describe('EbayApiClient Unit Tests', () => {
       const result = await apiClient.get('/sell/inventory/v1/test');
       expect(result).toEqual({ success: true });
 
-      consoleErrorSpy.mockRestore();
+      apiErrorSpy.mockRestore();
     }, 10000);
 
     it('should retry on 504 errors', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiErrorSpy = vi.spyOn(apiLogger, 'error').mockImplementation(() => {});
 
       nock('https://api.sandbox.ebay.com')
         .get('/sell/inventory/v1/test')
@@ -204,13 +262,13 @@ describe('EbayApiClient Unit Tests', () => {
       const result = await apiClient.get('/sell/inventory/v1/test');
       expect(result).toEqual({ success: true });
 
-      consoleErrorSpy.mockRestore();
+      apiErrorSpy.mockRestore();
     }, 10000);
   });
 
   describe('Rate Limit Header Tracking', () => {
     it('should log rate limit headers when present', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiHttpSpy = vi.spyOn(apiLogger, 'http').mockImplementation(() => {});
 
       nock('https://api.sandbox.ebay.com').get('/sell/inventory/v1/test').reply(
         200,
@@ -224,17 +282,16 @@ describe('EbayApiClient Unit Tests', () => {
       await apiClient.get('/sell/inventory/v1/test');
 
       // Check that rate limit info was logged (could be in detailed debug format)
-      const rateLimitCalls = consoleErrorSpy.mock.calls.filter(
-        (call) =>
-          call[0]?.toString().includes('Rate Limit') || call[0]?.toString().includes('4500/5000')
+      const rateLimitCalls = apiHttpSpy.mock.calls.filter(
+        (call) => (call[1] as { rateLimit?: string } | undefined)?.rateLimit === '4500/5000'
       );
       expect(rateLimitCalls.length).toBeGreaterThan(0);
 
-      consoleErrorSpy.mockRestore();
+      apiHttpSpy.mockRestore();
     });
 
     it('should not log when rate limit headers are absent', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const apiHttpSpy = vi.spyOn(apiLogger, 'http').mockImplementation(() => {});
 
       nock('https://api.sandbox.ebay.com')
         .get('/sell/inventory/v1/test')
@@ -243,12 +300,12 @@ describe('EbayApiClient Unit Tests', () => {
       await apiClient.get('/sell/inventory/v1/test');
 
       // Should not have been called with rate limit message
-      const rateLimitCalls = consoleErrorSpy.mock.calls.filter((call) =>
-        call[0]?.toString().includes('eBay Rate Limit')
+      const rateLimitCalls = apiHttpSpy.mock.calls.filter(
+        (call) => (call[1] as { rateLimit?: string } | undefined)?.rateLimit
       );
       expect(rateLimitCalls).toHaveLength(0);
 
-      consoleErrorSpy.mockRestore();
+      apiHttpSpy.mockRestore();
     });
   });
 

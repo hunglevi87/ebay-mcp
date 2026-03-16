@@ -1,17 +1,20 @@
 import { config } from 'dotenv';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import type { EbayConfig } from '@/types/ebay.js';
 import type { Implementation } from '@modelcontextprotocol/sdk/types.js';
 import { LocaleEnum } from '@/types/ebay-enums.js';
+import { getVersion } from '@/utils/version.js';
 
-// Load .env silently - suppress dotenv output to keep stdout clean for MCP JSON-RPC
-config({ quiet: true });
-
-// Get the current directory for loading scope files
+// Get the current directory for loading scope files and .env
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env from the package root (two levels up from src/config/), not process.cwd().
+// MCP servers inherit cwd from the host (e.g. Claude Code's project dir), so
+// process.cwd() may point to an unrelated project with a different .env.
+config({ path: join(__dirname, '../../.env'), quiet: true });
 
 // Type for scope JSON structure
 interface ScopeDefinition {
@@ -72,7 +75,11 @@ function getSandboxScopes(): string[] {
  * Get default scopes for the specified environment
  */
 export function getDefaultScopes(environment: 'production' | 'sandbox'): string[] {
-  return environment === 'production' ? getProductionScopes() : getSandboxScopes();
+  if (environment === 'production') {
+    return getProductionScopes();
+  }
+
+  return getSandboxScopes();
 }
 
 /**
@@ -178,6 +185,9 @@ export function validateEnvironmentConfig(): {
   };
 }
 
+/**
+ * Build EbayConfig from environment variables with safe defaults.
+ */
 export function getEbayConfig(): EbayConfig {
   const clientId = process.env.EBAY_CLIENT_ID ?? '';
   const clientSecret = process.env.EBAY_CLIENT_SECRET ?? '';
@@ -185,6 +195,8 @@ export function getEbayConfig(): EbayConfig {
   const accessToken = process.env.EBAY_USER_ACCESS_TOKEN ?? '';
   const refreshToken = process.env.EBAY_USER_REFRESH_TOKEN ?? '';
   const appAccessToken = process.env.EBAY_APP_ACCESS_TOKEN ?? '';
+  const marketplaceId = (process.env.EBAY_MARKETPLACE_ID ?? '').trim() || 'EBAY_US';
+  const contentLanguage = (process.env.EBAY_CONTENT_LANGUAGE ?? '').trim() || 'en-US';
 
   // Only require client credentials - tokens can be optional (generated from refresh token)
   if (clientId === '' || clientSecret === '') {
@@ -197,6 +209,8 @@ export function getEbayConfig(): EbayConfig {
     clientId,
     clientSecret,
     redirectUri: process.env.EBAY_REDIRECT_URI,
+    marketplaceId,
+    contentLanguage,
     environment,
     accessToken,
     refreshToken,
@@ -248,8 +262,8 @@ export function getAuthUrl(
   scopes?: string[]
 ): string;
 export function getAuthUrl(
-  clientIdOrEnvironment: string | 'production' | 'sandbox',
-  redirectUri?: string | undefined,
+  clientIdOrEnvironment: string,
+  redirectUri?: string,
   environment?: 'production' | 'sandbox',
   locale: LocaleEnum = LocaleEnum.en_US,
   prompt: 'login' | 'consent' = 'login',
@@ -266,8 +280,8 @@ export function getAuthUrl(
   }
 
   // Otherwise, generate the full OAuth authorization URL
-  const clientId = clientIdOrEnvironment as string;
-  const env = environment || 'sandbox';
+  const clientId = clientIdOrEnvironment;
+  const env = environment ?? 'sandbox';
   const scope = getDefaultScopes(env);
 
   if (!(clientId && redirectUri)) {
@@ -277,19 +291,20 @@ export function getAuthUrl(
     return '';
   }
 
-  const authDomain =
-    env === 'production' ? 'https://auth.ebay.com' : 'https://auth.sandbox.ebay.com';
-  const params = new URLSearchParams({
+  const authBase = env === 'production' ? 'https://auth.ebay.com' : 'https://auth.sandbox.ebay.com';
+
+  const scopeList = scopes?.join('%20') || scope.join('%20');
+
+  const authorizeParams = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: responseType,
-    scope: scopes?.join(' ') || scope.join(' '),
     prompt,
     locale,
     ...(state ? { state } : {}),
   });
 
-  return `${authDomain}/oauth2/authorize?${params.toString()}`;
+  return `${authBase}/oauth2/authorize?${authorizeParams.toString()}&scope=${scopeList}`;
 }
 
 /**
@@ -307,73 +322,76 @@ export function getOAuthAuthorizationUrl(
   locale?: string,
   state?: string
 ): string {
-  // Build the authorize URL using auth2 endpoint (correct eBay OAuth endpoint)
-  const authDomain =
-    environment === 'production' ? 'https://auth2.ebay.com' : 'https://auth2.sandbox.ebay.com';
+  const authBase =
+    environment === 'production' ? 'https://auth.ebay.com' : 'https://auth.sandbox.ebay.com';
 
-  const authorizeEndpoint = `${authDomain}/oauth2/authorize`;
+  let scopeList: string;
+  if (scopes && scopes.length > 0) {
+    scopeList = scopes.join('%20');
+  } else {
+    const defaultScopes = getDefaultScopes(environment);
+    scopeList = defaultScopes.join('%20');
+  }
 
-  // Build query parameters for the authorize endpoint
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
+    response_type: 'code',
+    ...(state ? { state } : {}),
   });
 
-  // Add scopes only if provided (optional - eBay handles automatically if not specified)
-  if (scopes && scopes.length > 0) {
-    params.append('scope', scopes.join(' '));
-  } else {
-    // Use default scopes for the environment if no scopes are specified
-    const defaultScopes = getDefaultScopes(environment);
-    params.append('scope', defaultScopes.join(' '));
-  }
-
-  // Always add state parameter (empty if not provided)
-  params.append('state', state || '');
-
-  // Add response_type
-  params.append('response_type', 'code');
-
-  // Add hd parameter (required by eBay)
-  params.append('hd', '');
-
-  // Build the signin URL that redirects to authorize
-  const signinDomain =
-    environment === 'production' ? 'https://signin.ebay.com' : 'https://signin.sandbox.ebay.com';
-
-  const ruParam = encodeURIComponent(`${authorizeEndpoint}?${params.toString()}`);
-
-  return `${signinDomain}/signin?ru=${ruParam}&sgfl=oauth2_login&AppName=${clientId}`;
+  return `${authBase}/oauth2/authorize?${params.toString()}&scope=${scopeList}`;
 }
+
+const iconUrl = (size: string): string => {
+  const url = new URL(`../../public/icons/${size}.png`, import.meta.url);
+  const path = fileURLToPath(url);
+  if (!existsSync(path)) {
+    console.warn(
+      `[eBay MCP] Icon not found at ${path}. Ensure public/icons is included in the package.`
+    );
+  }
+  return url.toString();
+};
 
 export const mcpConfig: Implementation = {
   name: 'eBay API Model Context Protocol Server',
-  version: '1.4.2',
+  version: getVersion(),
   title: 'eBay API Model Context Protocol Server',
-  websiteUrl: 'https://github.com/ebay/ebay-mcp-server',
+  websiteUrl: 'https://github.com/YosefHayim/ebay-mcp',
   icons: [
     {
-      src: './48x48.png',
+      src: iconUrl('16x16'),
+      mimeType: 'image/png',
+      sizes: ['16x16'],
+    },
+    {
+      src: iconUrl('32x32'),
+      mimeType: 'image/png',
+      sizes: ['32x32'],
+    },
+    {
+      src: iconUrl('48x48'),
       mimeType: 'image/png',
       sizes: ['48x48'],
     },
     {
-      src: './128x128.png',
+      src: iconUrl('128x128'),
       mimeType: 'image/png',
       sizes: ['128x128'],
     },
     {
-      src: './256x256.png',
+      src: iconUrl('256x256'),
       mimeType: 'image/png',
       sizes: ['256x256'],
     },
     {
-      src: './512x512.png',
+      src: iconUrl('512x512'),
       mimeType: 'image/png',
       sizes: ['512x512'],
     },
     {
-      src: './1024x1024.png',
+      src: iconUrl('1024x1024'),
       mimeType: 'image/png',
       sizes: ['1024x1024'],
     },

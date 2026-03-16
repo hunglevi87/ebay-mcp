@@ -13,6 +13,50 @@ export interface ToolDefinition {
 
 export const developerTools: ToolDefinition[] = [
   {
+    name: 'ebay_get_api_status',
+    description:
+      'Get the latest eBay API status and incidents from the official RSS feed. Returns recent issues, fixes, and outages for eBay APIs (e.g. Trading API, Inventory API, Sandbox). Use when the user asks about API status, outages, or fixes.',
+    inputSchema: {
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(50)
+        .optional()
+        .describe('Maximum number of items to return (default 20)'),
+      status: z
+        .enum(['Resolved', 'Unresolved'])
+        .optional()
+        .describe('Filter by status: Resolved or Unresolved'),
+      api: z
+        .string()
+        .optional()
+        .describe('Filter by API name (e.g. "Trading API", "Inventory API", "Sandbox")'),
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              summary: { type: 'string' },
+              link: { type: 'string' },
+              api: { type: 'string' },
+              site: { type: 'string' },
+              status: { type: 'string' },
+              lastUpdated: { type: 'string' },
+            },
+          },
+        },
+        error: { type: 'string' },
+      },
+      description: 'Latest API status items from eBay developer feed',
+    } as OutputArgs,
+  },
+  {
     name: 'ebay_get_rate_limits',
     description:
       'Get application rate limits for eBay APIs. Returns call quota, remaining calls, and time until reset for each API resource.',
