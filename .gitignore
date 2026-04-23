@@ -207,14 +207,6 @@ context7.json
 Taskfile.yml
 
 # Local agent/tooling artifacts at repo root
-/.ai-guard/
-/.clinerules/
-/.cursor/
-/.gemini/
-/.kilo/
-/.opencode/
-/kilo.jsonc
-/opencode.json
-DEDUP-REPORT.md
-DEDUP-REPORT.json
-.dedup.json
+.*
+*.json
+*.md
