@@ -6,17 +6,8 @@ import {
   notificationDestinationSchema,
   offerToBuyersSchema,
 } from '../schemas.js';
-import { OutputArgs, ToolAnnotations } from '../tool-definitions.js';
+import type { OutputArgs, ToolDefinition } from '../tool-definitions.js';
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, z.ZodTypeAny>;
-  title?: string;
-  outputSchema?: OutputArgs;
-  annotations?: ToolAnnotations;
-  _meta?: Record<string, unknown>;
-}
 export const communicationTools: ToolDefinition[] = [
   // Negotiation API
   {

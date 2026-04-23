@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { idSchema } from '../schema-helpers.js';
 
 /**
  * Zod schemas for eDelivery API input validation
@@ -8,15 +9,6 @@ import { z } from 'zod';
  *
  * Note: The eDelivery API is only available for Greater-China based sellers with an active eDIS account.
  */
-
-// Reusable schema for ID parameters
-const idSchema = (name: string, description: string) =>
-  z.string({
-    message: `${name} is required`,
-    required_error: `${name.toLowerCase().replace(/\s+/g, '_')} is required`,
-    invalid_type_error: `${name.toLowerCase().replace(/\s+/g, '_')} must be a string`,
-    description,
-  });
 
 // Reusable schema for query parameters
 const paramsSchema = z

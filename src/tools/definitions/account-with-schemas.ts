@@ -7,7 +7,7 @@
 
 import { MarketplaceId } from '@/types/ebay-enums.js';
 import { z } from 'zod';
-import type { ToolDefinition } from './account.js';
+import type { ToolDefinition } from '../tool-definitions.js';
 
 // Import schemas from the new schemas folder
 import {

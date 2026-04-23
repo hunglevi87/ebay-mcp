@@ -1,4 +1,11 @@
 import type { EbayApiClient } from '../client.js';
+import {
+  assertRequiredString,
+  buildPaginatedQueryParams,
+  getPathWithContextError,
+  getWithContextError,
+} from './shared.js';
+import { buildTruthyPaginatedParams } from '../shared/query-params.js';
 
 /**
  * Negotiation API - Buyer-seller negotiations and offers
@@ -12,32 +19,18 @@ export class NegotiationApi {
   /**
    * Find eligible items for a seller-initiated offer
    * Endpoint: GET /find_eligible_items
+   * @param filter API filter expression.
+   * @param limit Maximum number of records to return.
+   * @param offset Zero-based pagination offset.
    * @throws Error if the request fails
    */
   async findEligibleItems(filter?: string, limit?: number, offset?: number) {
-    const params: Record<string, string | number> = {};
-
-    if (filter !== undefined) {
-      if (typeof filter !== 'string') {
-        throw new Error('filter must be a string when provided');
-      }
-      params.filter = filter;
-    }
-    if (limit !== undefined) {
-      if (typeof limit !== 'number' || limit < 1) {
-        throw new Error('limit must be a positive number when provided');
-      }
-      params.limit = limit;
-    }
-    if (offset !== undefined) {
-      if (typeof offset !== 'number' || offset < 0) {
-        throw new Error('offset must be a non-negative number when provided');
-      }
-      params.offset = offset;
-    }
+    const eligibleItemsPath = `${this.basePath}/find_eligible_items`;
+    const queryParams = buildPaginatedQueryParams(filter, limit, offset);
 
     try {
-      return await this.client.get(`${this.basePath}/find_eligible_items`, params);
+      const response = await this.client.get(eligibleItemsPath, queryParams);
+      return response;
     } catch (error) {
       throw new Error(
         `Failed to find eligible items: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -66,14 +59,19 @@ export class NegotiationApi {
 
   /**
    * Get offers to buyers (Best Offers)
+   * @param filter API filter expression.
+   * @param limit Maximum number of records to return.
+   * @param offset Zero-based pagination offset.
    * @deprecated This method does not match any endpoint in the OpenAPI spec
    */
   async getOffersToBuyers(filter?: string, limit?: number, offset?: number) {
-    const params: Record<string, string | number> = {};
-    if (filter) params.filter = filter;
-    if (limit) params.limit = limit;
-    if (offset) params.offset = offset;
-    return await this.client.get(`${this.basePath}/offer`, params);
+    const params = buildTruthyPaginatedParams(filter, limit, offset);
+    return await getWithContextError(
+      this.client,
+      `${this.basePath}/offer`,
+      params,
+      'Failed to get offers to buyers'
+    );
   }
 
   /**
@@ -88,19 +86,15 @@ export class NegotiationApi {
   /**
    * Get a specific offer
    * Endpoint: GET /offer/{offerId}
+   * @param offerId Offer identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getOffer(offerId: string) {
-    if (!offerId || typeof offerId !== 'string') {
-      throw new Error('offerId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/offer/${offerId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get offer: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(offerId, 'offerId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/offer/${offerId}`,
+      'Failed to get offer'
+    );
   }
 }

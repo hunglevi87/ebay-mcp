@@ -2,6 +2,7 @@ import axios from 'axios';
 import { XMLBuilder, XMLParser } from 'fast-xml-parser';
 import type { EbayApiClient } from '@/api/client.js';
 import { apiLogger } from '@/utils/logger.js';
+import { isRecord } from '@/utils/type-guards.js';
 
 const COMPAT_LEVEL = '1451';
 const SITE_ID = '0';
@@ -49,7 +50,7 @@ export class TradingApiClient {
     });
   }
 
-  getBaseUrl(): string {
+  getTradingBaseUrl(): string {
     return this.baseUrl;
   }
 
@@ -92,13 +93,21 @@ export class TradingApiClient {
 
     let parsed: Record<string, unknown>;
     try {
-      parsed = this.parser.parse(response.data) as Record<string, unknown>;
+      const parsedValue = this.parser.parse(response.data);
+      if (!isRecord(parsedValue)) {
+        throw new Error('Trading API response must be an object');
+      }
+      parsed = parsedValue;
     } catch (e) {
       throw new Error(
         `Failed to parse Trading API ${callName} response: ${e instanceof Error ? e.message : String(e)}`
       );
     }
-    const result = (parsed[responseTag] || parsed) as Record<string, unknown>;
+    const resultValue = parsed[responseTag] || parsed;
+    if (!isRecord(resultValue)) {
+      throw new Error(`Trading API ${callName} response payload is not an object`);
+    }
+    const result = resultValue;
 
     // Log warnings without failing
     if (result.Ack === 'Warning') {

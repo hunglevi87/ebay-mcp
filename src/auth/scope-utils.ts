@@ -7,7 +7,7 @@ import { getDefaultScopes, validateScopes } from '@/config/environment.js';
 /**
  * Result of scope validation
  */
-export interface ValidationResult {
+export interface ScopeValidationResult {
   isValid: boolean;
   warnings: string[];
   validScopes: string[];
@@ -39,7 +39,7 @@ export interface ScopeRequirement {
 export function validateScopesDetailed(
   scopes: string[],
   environment: 'production' | 'sandbox'
-): ValidationResult {
+): ScopeValidationResult {
   const validation = validateScopes(scopes, environment);
   const validScopeSet = new Set(getDefaultScopes(environment));
 
@@ -333,7 +333,7 @@ export function getReadonlyScope(writeScope: string): string | null {
 /**
  * Get scope description from scope name
  */
-export function getScopeDescription(scope: string): string {
+export function getScopeTypeDescription(scope: string): string {
   // Extract the last part of the scope
   const parts = scope.split('/');
   const scopeType = parts[parts.length - 1];
@@ -364,4 +364,11 @@ export function getScopeDescription(scope: string): string {
   };
 
   return descriptions[scopeType] || `Access to ${scopeType}`;
+}
+
+/**
+ * Backward-compatible alias for scope description lookup.
+ */
+export function getScopeDescription(scope: string): string {
+  return getScopeTypeDescription(scope);
 }

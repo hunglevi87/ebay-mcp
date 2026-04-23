@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description This call returns listing violation counts for a seller. A user can pass in one or more compliance types through the <strong>compliance_type</strong> query parameter. See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on the supported listing compliance types. Listing violations are returned for multiple marketplaces if the seller sells on multiple eBay marketplaces.<br /><br /> <span class="tablenote"><strong>Note:</strong> Only a canned response, with counts for all listing compliance types, is returned in the Sandbox environment. Due to this limitation, the <strong>compliance_type</strong> query parameter (if used) will not have an effect on the response. </span> */
-        get: operations["getListingViolationsSummary"];
+        get: SellComplianceOperations["getListingViolationsSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -29,7 +29,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description This call returns specific listing violations for the supported listing compliance types. Only one compliance type can be passed in per call, and the response will include all the listing violations for this compliance type, and listing violations are grouped together by eBay listing ID. See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on the supported listing compliance types. This method also has pagination control. <br /><br /> <span class="tablenote"><strong>Note:</strong> A maximum of 2000 listing violations will be returned in a result set. If the seller has more than 2000 listing violations, some/all of those listing violations must be corrected before additional listing violations will be retrieved. The user should pay attention to the <strong>total</strong> value in the response. If this value is '2000', it is possible that the seller has more than 2000 listing violations, but this field maxes out at 2000. </span> <br /><span class="tablenote"><strong>Note:</strong> In a future release of this API, the seller will be able to pass in a specific eBay listing ID as a query parameter to see if this specific listing has any violations. </span><br /> <span class="tablenote"><strong>Note:</strong> Only mocked non-compliant listing data will be returned for this call in the Sandbox environment, and not specific to the seller. However, the user can still use this mock data to experiment with the compliance type filters and pagination control.</span> */
-        get: operations["getListingViolations"];
+        get: SellComplianceOperations["getListingViolations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -40,7 +40,7 @@ export interface paths {
     };
 }
 export type webhooks = Record<string, never>;
-export interface components {
+export interface SellComplianceComponents {
     schemas: {
         /** @description This type is used by the <strong>aspectsRecommendation</strong> container, which is returned if eBay has found a listing with missing or invalid item aspects (<code>ASPECTS_ADOPTION</code> compliance type). */
         AspectRecommendations: {
@@ -56,18 +56,18 @@ export interface components {
             /** @description This field provides a textual summary of the listing violation. A <strong>message</strong> field is returned for each listing violation. This message will vary widely based on the compliance type and corresponding reason code. */
             message?: string;
             /** @description This container defines the variation within a multiple-variation listing that has the listing violation. This container is only returned if an individual variation within a multiple-variation listing has the listing violation. */
-            variation?: components["schemas"]["VariationDetails"];
+            variation?: SellComplianceComponents["schemas"]["VariationDetails"];
             /** @description This container provides more information about the listing violation, if applicable. The type of information that appears here will vary based on the compliance type and type of violation. For example, for <code>ASPECTS_ADOPTION</code> violations, this container lists the missing aspect(s) or aspect(s) with invalid values. */
-            violationData?: components["schemas"]["NameValueList"][];
+            violationData?: SellComplianceComponents["schemas"]["NameValueList"][];
             /** @description This container is returned for <code>ASPECTS_ADOPTION</code> violations if eBay has found one or more item aspect name-value pairs that may be appropriate for the seller's product. In many cases, the missing or incorrect item aspect(s) shown under the corresponding <strong>violationData</strong> array, will also show up under the <strong>aspectRecommendations</strong> array with suggested value(s). <br><br><span class="tablenote"><strong>Note:</strong> eBay catalog product adoption is not enforced for any eBay category at this time, so a recommended eBay product ID (aka ePID) will not be returned under the <strong>productRecommendation</strong> container at this time.</span> */
-            correctiveRecommendations?: components["schemas"]["CorrectiveRecommendations"];
+            correctiveRecommendations?: SellComplianceComponents["schemas"]["CorrectiveRecommendations"];
             /** @description The enumeration value returned in this field indicates if the listing violation is considered to be <code>OUT_OF_COMPLIANCE</code> with an eBay listing policy, or the listing is considered to be <code>AT_RISK</code> of becoming non-compliant against an eBay listing policy. <br><br>Generally, <code>OUT_OF_COMPLIANCE</code> policy violations can prevent the seller from revising a listing until the underlying violation(s) can be remedied. When the compliance state is <code>AT_RISK</code>, the seller is not blocked from revising the listing, but the seller should correct the violation to prevent the listing from being blocked for revisions in the future.<br><br><span class="tablenote"><strong>Note:</strong> This field is returned for most violations, but not all. In the case that this field is not returned, it can be assumed that the state of the listing violation is <code>OUT_OF_COMPLIANCE</code>.</span> For implementation help, refer to <a href='https://developer.ebay.com/api-docs/sell/compliance/types/com:ComplianceStateEnum'>eBay API documentation</a> */
             complianceState?: string;
         };
         /** @description This type is the base type for the <strong>getListingViolationsSummary</strong> response. The <strong>violationSummaries</strong> container contains an array of policy violation counts for each unique eBay marketplace and compliance type violation. */
         ComplianceSummary: {
             /** @description This container is an array of one or more policy violation counts. A policy violation count is returned for each unique eBay marketplace and compliance type violation. As long as there is at least one non-compliant listing for the specified compliance type(s), this container will be returned. If no non-compliant listings are found for the specified compliance type(s), an HTTP status code of <code>204 No Content</code> is returned, and there is no response body. */
-            violationSummaries?: components["schemas"]["ComplianceSummaryInfo"][];
+            violationSummaries?: SellComplianceComponents["schemas"]["ComplianceSummaryInfo"][];
         };
         /** @description This type is used by each unique eBay marketplace and compliance type combination that is returned in the <strong>getListingViolationsSummary</strong> response to indicate the total number of listing violations in regards to that eBay marketplace and compliance type. */
         ComplianceSummaryInfo: {
@@ -92,14 +92,14 @@ export interface components {
             /** @description <span class="tablenote"><strong>Note:</strong> This field is for future use, and will not be returned, even for listings created through the Inventory API.</span><br /><br /> The unique identifier of the offer. This field is only applicable and returned for listings that were created through the Inventory API. To convert an Inventory Item object into an eBay listing, an Offer object must be created and published. */
             offerId?: string;
             /** @description This container consists of an array of one or more listing violations applicable to the eBay listing specified in the <strong>listingId</strong> field. This array is returned for each eBay listing that has one or more violations.<br><br>For each returned violation, the fields that are returned and the details that are given will depend on the listing violation. */
-            violations?: components["schemas"]["ComplianceDetail"][];
+            violations?: SellComplianceComponents["schemas"]["ComplianceDetail"][];
         };
         /** @description This type is used by the <strong>correctiveRecommendations</strong> container, which is returned if eBay has suggestions for how to correct the given violation. */
         CorrectiveRecommendations: {
             /** @description This container is only applicable (and possibly returned) for the <code>PRODUCT_ADOPTION</code> and <code>PRODUCT_ADOPTION_CONFORMANCE</code> compliance types, and since eBay catalog product adoption is not enforced for any eBay category at this time, the <strong>productRecommendation</strong> container will not be returned at this time. */
-            productRecommendation?: components["schemas"]["ProductRecommendation"];
+            productRecommendation?: SellComplianceComponents["schemas"]["ProductRecommendation"];
             /** @description This container is returned for <code>ASPECTS_ADOPTION</code> violations if eBay has found one or more item aspect name-value pairs that may be appropriate for the seller's product. In many cases, the missing or invalid item aspect(s) shown under the corresponding <strong>violationData</strong> array, will also show up under this array with suggested value(s). */
-            aspectRecommendations?: components["schemas"]["AspectRecommendations"][];
+            aspectRecommendations?: SellComplianceComponents["schemas"]["AspectRecommendations"][];
         };
         /** @description This type defines the fields that can be returned in an error. */
         Error: {
@@ -121,7 +121,7 @@ export interface components {
             /** @description An array of request elements most closely associated to the error. */
             outputRefIds?: string[];
             /** @description An array of name/value pairs that describe details the error condition. These are useful when multiple errors are returned. */
-            parameters?: components["schemas"]["ErrorParameter"][];
+            parameters?: SellComplianceComponents["schemas"]["ErrorParameter"][];
             /** @description Further helps indicate which subsystem the error is coming from. System subcategories include: Initialization, Serialization, Security, Monitoring, Rate Limiting, etc. */
             subdomain?: string;
         };
@@ -162,7 +162,7 @@ export interface components {
              */
             limit?: number;
             /** @description An array of listing violations that match the criteria in the call request, including pagination control {if set). As long as there is at least one listing violation that matches the input criteria, this container will be returned. If no listing violations are found for the seller, an HTTP status code of <code>204 No Content</code> is returned, and there is no response body. */
-            listingViolations?: components["schemas"]["ComplianceViolation"][];
+            listingViolations?: SellComplianceComponents["schemas"]["ComplianceViolation"][];
         };
         /** @description This type is used by the <strong>productRecommendation</strong> container, which is returned if eBay has found an eBay catalog product that may be a match for the product (or product variation) that has a listing violation.<br><br><span class="tablenote"><strong>Note:</strong> eBay catalog product adoption is not enforced at this time, so product adoption violations are no longer returned. Due to this fact, this type and <strong>productRecommendation</strong> container are not currently applicable. </span> */
         ProductRecommendation: {
@@ -174,7 +174,7 @@ export interface components {
             /** @description The seller-defined SKU value of the variation within the multiple-variation listing with the violation{s). This field is only returned if a seller-defined SKU value is defined for the variation. SKU values are optional in listing except when creating listings using the Inventory API. */
             sku?: string;
             /** @description An array of one or more variation aspects that define a variation within a multiple-variation listing. The aspect{s) returned here define the individual variation, because these aspects will differ for each variation. Common varying aspects include color and size. */
-            variationAspects?: components["schemas"]["NameValueList"][];
+            variationAspects?: SellComplianceComponents["schemas"]["NameValueList"][];
         };
     };
     responses: never;
@@ -184,7 +184,7 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export interface operations {
+export interface SellComplianceOperations {
     getListingViolationsSummary: {
         parameters: {
             query?: {
@@ -206,7 +206,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["ComplianceSummary"];
+                    "application/json;charset=UTF-8": SellComplianceComponents["schemas"]["ComplianceSummary"];
                 };
             };
             /** @description No Content */
@@ -261,7 +261,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PagedComplianceViolationCollection"];
+                    "application/json;charset=UTF-8": SellComplianceComponents["schemas"]["PagedComplianceViolationCollection"];
                 };
             };
             /** @description No Content */

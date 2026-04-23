@@ -1,31 +1,6 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-
-export interface OutputArgs {
-  [x: string]: unknown;
-  type: 'object';
-  properties?: Record<string, object>;
-  required?: string[];
-}
-
-export interface ToolAnnotations {
-  [x: string]: unknown;
-  title?: string;
-  readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
-}
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, z.ZodTypeAny>;
-  title?: string;
-  outputSchema?: OutputArgs;
-  annotations?: ToolAnnotations;
-  _meta?: Record<string, unknown>;
-}
+import type { OutputArgs, ToolDefinition } from '../tool-definitions.js';
 
 /**
  * Token Management & Authentication Tools

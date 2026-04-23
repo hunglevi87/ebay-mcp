@@ -1,13 +1,13 @@
 # Automated Release Workflow
-# ─────────────────────────
+# -------------------------
 # Bumps version, creates Git tag, and publishes a GitHub Release
 # when a PR is merged into `main` or a commit is pushed directly.
 #
 # Version bump is determined by PR labels (or defaults to patch for direct pushes):
-#   - `major` → breaking changes (1.0.0 → 2.0.0)
-#   - `minor` → new features    (1.0.0 → 1.1.0)
-#   - `patch` → bug fixes       (1.0.0 → 1.0.1)  [default]
-#   - `no-release` → skip entirely
+#   - `major` -> breaking changes (1.0.0 -> 2.0.0)
+#   - `minor` -> new features    (1.0.0 -> 1.1.0)
+#   - `patch` -> bug fixes       (1.0.0 -> 1.0.1)  [default]
+#   - `no-release` -> skip entirely
 #
 # Notes:
 #   - Ensure labels `major`, `minor`, `patch`, `no-release` exist in your repo
@@ -63,7 +63,7 @@ jobs:
         id: skip_check
         run: |
           if git describe --exact-match HEAD >/dev/null 2>&1; then
-            echo "HEAD is already tagged — skipping release"
+            echo "HEAD is already tagged - skipping release"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -100,7 +100,7 @@ jobs:
         id: version
         run: |
           if ! node -e "const p = require('./package.json'); if (!p.version) process.exit(1);" 2>/dev/null; then
-            echo "No version found in package.json — initializing to 0.1.0"
+            echo "No version found in package.json - initializing to 0.1.0"
             npm pkg set version=0.1.0
           fi
           NEW_VERSION=$(npm version ${{ steps.bump.outputs.type }} --no-git-tag-version)
@@ -129,7 +129,7 @@ jobs:
             if [ "${{ github.event_name }}" = "push" ]; then
               echo "**Direct push to ${GITHUB_REF_NAME}**"
             else
-              echo "**PR:** [#${PR_NUMBER} — ${PR_TITLE}](${PR_URL})"
+              echo "**PR:** [#${PR_NUMBER} - ${PR_TITLE}](${PR_URL})"
             fi
             echo "**Bump:** \`${BUMP_TYPE}\`"
             echo ""
@@ -146,7 +146,7 @@ jobs:
           git add package.json pnpm-lock.yaml 2>/dev/null || git add package.json
           git commit -m "chore(release): ${{ steps.version.outputs.version }}"
           git tag -a "${{ steps.version.outputs.version }}" \
-            -m "Release ${{ steps.version.outputs.version }} — ${{ steps.desc.outputs.title }}"
+            -m "Release ${{ steps.version.outputs.version }} - ${{ steps.desc.outputs.title }}"
           git push origin main --follow-tags
 
       - name: Create GitHub Release
@@ -156,7 +156,7 @@ jobs:
           TAG: ${{ steps.version.outputs.version }}
         run: |
           gh release create "$TAG" \
-            --title "$TAG — ${{ steps.desc.outputs.title }}" \
+            --title "$TAG - ${{ steps.desc.outputs.title }}" \
             --notes "${{ steps.notes.outputs.body }}" \
             --latest
 

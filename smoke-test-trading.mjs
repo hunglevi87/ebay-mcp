@@ -6,10 +6,9 @@
 import { config } from 'dotenv';
 config({ quiet: true });
 
-// Dynamic imports from built output
-const { EbayApiClient } = await import('./build/api/client.js');
-const { TradingApiClient } = await import('./build/api/client-trading.js');
-const { TradingApi } = await import('./build/api/trading/trading.js');
+import { EbayApiClient } from './build/api/client.js';
+import { TradingApiClient } from './build/api/client-trading.js';
+import { TradingApi } from './build/api/trading/trading.js';
 
 const ITEM_ID = '168103939137';
 

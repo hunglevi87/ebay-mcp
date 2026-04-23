@@ -254,7 +254,7 @@ async function createApp(): Promise<express.Application> {
             return {
               content: [
                 {
-                  type: 'text' as const,
+                  type: 'text',
                   text: JSON.stringify(result, null, 2),
                 },
               ],
@@ -265,7 +265,7 @@ async function createApp(): Promise<express.Application> {
             return {
               content: [
                 {
-                  type: 'text' as const,
+                  type: 'text',
                   text: JSON.stringify({ error: errorMessage }, null, 2),
                 },
               ],
@@ -283,7 +283,8 @@ async function createApp(): Promise<express.Application> {
    * MCP POST handler
    */
   const mcpPostHandler = async (req: express.Request, res: express.Response): Promise<void> => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    const sessionHeader = req.headers['mcp-session-id'];
+    const sessionId = typeof sessionHeader === 'string' ? sessionHeader : undefined;
     let transport: StreamableHTTPServerTransport;
 
     if (sessionId && transports.has(sessionId)) {
@@ -329,7 +330,8 @@ async function createApp(): Promise<express.Application> {
     req: express.Request,
     res: express.Response
   ): Promise<void> => {
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    const sessionHeader = req.headers['mcp-session-id'];
+    const sessionId = typeof sessionHeader === 'string' ? sessionHeader : undefined;
     if (!sessionId || !transports.has(sessionId)) {
       res.status(400).json({
         error: 'invalid_session',

@@ -1,4 +1,5 @@
 import type { EbayApiClient } from '../client.js';
+import { buildTruthyPaginatedParams } from '../shared/query-params.js';
 
 /**
  * VERO API - Verified Rights Owner program
@@ -27,10 +28,7 @@ export class VeroApi {
    * Get VERO report items (listings reported for infringement)
    */
   async getVeroReportItems(filter?: string, limit?: number, offset?: number) {
-    const params: Record<string, string | number> = {};
-    if (filter) params.filter = filter;
-    if (limit) params.limit = limit;
-    if (offset) params.offset = offset;
+    const params = buildTruthyPaginatedParams(filter, limit, offset);
     return await this.client.get(`${this.basePath}/vero_report_items`, params);
   }
 

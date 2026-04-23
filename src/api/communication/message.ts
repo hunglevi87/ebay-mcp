@@ -1,4 +1,10 @@
 import type { EbayApiClient } from '../client.js';
+import {
+  assertRequiredString,
+  buildPaginatedQueryParams,
+  getPathWithContextError,
+  getWithContextError,
+} from './shared.js';
 
 /**
  * Message API - Buyer-seller messaging
@@ -31,56 +37,51 @@ export class MessageApi {
   /**
    * Get conversations
    * Endpoint: GET /conversation
+   * @param filter API filter expression.
+   * @param limit Maximum number of records to return.
+   * @param offset Zero-based pagination offset.
    * @throws Error if the request fails
    */
   async getConversations(filter?: string, limit?: number, offset?: number) {
-    const params: Record<string, string | number> = {};
+    const conversationPath = `${this.basePath}/conversation`;
+    const queryParams = this.buildConversationQueryParams(filter, limit, offset);
+    return await getWithContextError(
+      this.client,
+      conversationPath,
+      queryParams,
+      'Failed to get conversations'
+    );
+  }
 
-    if (filter !== undefined) {
-      if (typeof filter !== 'string') {
-        throw new Error('filter must be a string when provided');
-      }
-      params.filter = filter;
-    }
-    if (limit !== undefined) {
-      if (typeof limit !== 'number' || limit < 1) {
-        throw new Error('limit must be a positive number when provided');
-      }
-      params.limit = limit;
-    }
-    if (offset !== undefined) {
-      if (typeof offset !== 'number' || offset < 0) {
-        throw new Error('offset must be a non-negative number when provided');
-      }
-      params.offset = offset;
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/conversation`, params);
-    } catch (error) {
-      throw new Error(
-        `Failed to get conversations: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+  /**
+   * Build query params used by conversation listing endpoints.
+   *
+   * @param filter API filter expression.
+   * @param limit Maximum number of records to return.
+   * @param offset Zero-based pagination offset.
+   * @returns Validated conversation query params.
+   */
+  private buildConversationQueryParams(
+    filter?: string,
+    limit?: number,
+    offset?: number
+  ): Record<string, string | number> {
+    return buildPaginatedQueryParams(filter, limit, offset);
   }
 
   /**
    * Get a specific conversation
    * Endpoint: GET /conversation/{conversation_id}
+   * @param conversationId Conversation identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getConversation(conversationId: string) {
-    if (!conversationId || typeof conversationId !== 'string') {
-      throw new Error('conversationId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/conversation/${conversationId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get conversation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(conversationId, 'conversationId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/conversation/${conversationId}`,
+      'Failed to get conversation'
+    );
   }
 
   /**

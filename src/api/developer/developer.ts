@@ -1,7 +1,7 @@
 import type { EbayApiClient } from '@/api/client.js';
-import type { components as AnalyticsComponents } from '@/types/application-settings/developerAnalyticsV1BetaOas3.js';
-import type { components as ClientComponents } from '@/types/application-settings/developerClientRegistrationV1Oas3.js';
-import type { components as KeyComponents } from '@/types/application-settings/developerKeyManagementV1Oas3.js';
+import type { DeveloperAnalyticsComponents as AnalyticsComponents } from '@/types/application-settings/developerAnalyticsV1BetaOas3.js';
+import type { DeveloperClientRegistrationComponents as ClientComponents } from '@/types/application-settings/developerClientRegistrationV1Oas3.js';
+import type { DeveloperKeyManagementComponents as KeyComponents } from '@/types/application-settings/developerKeyManagementV1Oas3.js';
 
 type RateLimitsResponse = AnalyticsComponents['schemas']['RateLimitsResponse'];
 type ClientSettings = ClientComponents['schemas']['ClientSettings'];

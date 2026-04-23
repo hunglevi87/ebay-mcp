@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description This method retrieves the call limit and utilization data for an application. The data is retrieved for all RESTful APIs and the legacy Trading API.  <br><br>The response from <b>getRateLimits</b> includes a list of the applicable resources and the "call limit", or quota, that is set for each resource. In addition to quota information, the response also includes the number of remaining calls available before the limit is reached, the time remaining before the quota resets, the number of calls made to the specific resource, and the length of the "time window" to which the quota applies.  <br><br>By default, this method returns utilization data for all RESTful API and the legacy Trading API resources. Use the <b>api_name</b> and <b>api_context</b> query parameters to filter the response to only the desired APIs.  <br><br>For more on call limits, see <a href="https://developer.ebay.com/support/app-check " target="_blank">Application Growth Check</a>. */
-        get: operations["getRateLimits"];
+        get: DeveloperAnalyticsOperations["getRateLimits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -29,7 +29,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description This method retrieves the call limit and utilization data for an application user. The call-limit data is returned for all RESTful APIs and the legacy Trading API that limit calls on a per-user basis.  <br><br>The response from <b>getUserRateLimits</b> includes a list of the applicable resources and the "call limit", or quota, that is set for each resource. In addition to quota information, the response also includes the number of remaining calls available before the limit is reached, the time remaining before the quota resets, the number of calls made to the specific resource, and the length of the "time window" to which the quota applies.  <br><br>By default, this method returns utilization data for all RESTful APIs resources and the legacy Trading API calls that limit request access by user. Use the <b>api_name</b> and <b>api_context</b> query parameters to filter the response to only the desired APIs.  <br><br>For more on call limits, see <a href="https://developer.ebay.com/support/app-check " target="_blank">Application Growth Check</a>. */
-        get: operations["getUserRateLimits"];
+        get: DeveloperAnalyticsOperations["getUserRateLimits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -40,7 +40,7 @@ export interface paths {
     };
 }
 export type webhooks = Record<string, never>;
-export interface components {
+export interface DeveloperAnalyticsComponents {
     schemas: {
         /** @description This type defines the fields that can be returned in an error. */
         Error: {
@@ -62,7 +62,7 @@ export interface components {
             /** @description An array of request elements most closely associated to the error. */
             outputRefIds?: string[];
             /** @description An array of name/value pairs that describe details the error condition. These are useful when multiple errors are returned. */
-            parameters?: components["schemas"]["ErrorParameter"][];
+            parameters?: DeveloperAnalyticsComponents["schemas"]["ErrorParameter"][];
             /** @description Further helps indicate which subsystem the error is coming from. System subcategories include: Initialization, Serialization, Security, Monitoring, Rate Limiting, etc. */
             subdomain?: string;
         };
@@ -106,19 +106,19 @@ export interface components {
             /** @description The version of the API for which rate-limit data is returned. For example <code>v1</code> or <code>v2</code>. */
             apiVersion?: string;
             /** @description A list of the methods for which rate-limit data is returned. For example <code>item</code> for the Feed API, <code>getOrder</code> for the Fulfillment API, <code>getProduct</code> for the Catalog API, <code>AddItems</code> for the Trading API. */
-            resources?: components["schemas"]["Resource"][];
+            resources?: DeveloperAnalyticsComponents["schemas"]["Resource"][];
         };
         /** @description This complex type defines a list of rate-limit data as it pertains to a method within the specified version of an API. */
         RateLimitsResponse: {
             /** @description The rate-limit data for the specified APIs. The rate-limit data is returned for all the methods in the specified APIs and data pertains to the current time window. */
-            rateLimits?: components["schemas"]["RateLimit"][];
+            rateLimits?: DeveloperAnalyticsComponents["schemas"]["RateLimit"][];
         };
         /** @description This complex type defines the resource (API method) and the current rate-limit data for that resource. */
         Resource: {
             /** @description The name of the resource (an API or an API method) to which the rate-limit data applies. */
             name?: string;
             /** @description A list of rate-limit data, where each list element represents the rate-limit data for a specific resource. */
-            rates?: components["schemas"]["Rate"][];
+            rates?: DeveloperAnalyticsComponents["schemas"]["Rate"][];
         };
     };
     responses: never;
@@ -128,7 +128,7 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export interface operations {
+export interface DeveloperAnalyticsOperations {
     getRateLimits: {
         parameters: {
             query?: {
@@ -149,7 +149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RateLimitsResponse"];
+                    "application/json": DeveloperAnalyticsComponents["schemas"]["RateLimitsResponse"];
                 };
             };
             /** @description No Content */
@@ -188,7 +188,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RateLimitsResponse"];
+                    "application/json": DeveloperAnalyticsComponents["schemas"]["RateLimitsResponse"];
                 };
             };
             /** @description No Content */
