@@ -8,7 +8,6 @@
 [![API Coverage](https://img.shields.io/badge/API%20coverage-100%25-success)](src/tools/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Contributors Welcome](https://img.shields.io/badge/contributors-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![grimoire-wizard](https://img.shields.io/npm/v/grimoire-wizard?label=wizard%3A+grimoire&color=0064D2)](https://github.com/YosefHayim/grimoire)
 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/yosefhayim-ebay-api-mcp-server-badge.png)](https://mseep.ai/app/yosefhayim-ebay-api-mcp-server)
 <a href="https://www.buymeacoffee.com/yosefhayim" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
@@ -158,7 +157,7 @@ The interactive setup wizard handles everything for you:
 npm run setup
 ```
 
-> **Powered by [grimoire-wizard](https://github.com/YosefHayim/grimoire)** — a config-driven CLI wizard framework [![grimoire-wizard](https://img.shields.io/npm/v/grimoire-wizard?label=grimoire-wizard&color=0064D2)](https://www.npmjs.com/package/grimoire-wizard)
+> Built with a standard Node CLI prompt stack for reliable interactive setup.
 
 The wizard will:
 

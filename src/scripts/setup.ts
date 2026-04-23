@@ -10,7 +10,7 @@ import { checkForUpdates } from '../utils/version.js';
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { getOAuthAuthorizationUrl } from '../config/environment.js';
-import { defineWizard, runWizard, ClackRenderer } from 'grimoire-wizard';
+import { defineWizard, runWizard, ClackRenderer } from '../utils/setup-wizard.js';
 import { loadExistingConfig } from './setup-shared.js';
 import { configureLLMClient, detectLLMClients } from '../utils/llm-client-detector.js';
 import { runSecurityChecks, displaySecurityResults } from '../utils/security-checker.js';
@@ -381,7 +381,7 @@ function displayUserInfo(userInfo: EbayUserInfo): void {
   console.log('');
 }
 
-// ─── Grimoire wizard ──────────────────────────────────────────────────────────
+// ─── Setup wizard ─────────────────────────────────────────────────────────────
 
 export async function runSetup(): Promise<void> {
   const existingConfig = loadExistingConfig(PROJECT_ROOT);
@@ -400,7 +400,7 @@ export async function runSetup(): Promise<void> {
 
   console.log(LOGO);
   console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag'));
-  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('grimoire-wizard') + '\n');
+  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('prompts') + '\n');
 
   console.log(ui.dim('  Welcome to the eBay MCP Server setup wizard!\n'));
   console.log('  This wizard will help you:\n');
@@ -419,7 +419,7 @@ export async function runSetup(): Promise<void> {
   const wizardConfig = defineWizard({
     meta: {
       name: 'eBay MCP',
-      description: 'Server Setup Wizard — powered by grimoire',
+      description: 'Server Setup Wizard',
     },
     theme: {
       tokens: {
@@ -829,7 +829,7 @@ export async function runSetup(): Promise<void> {
 
   console.log(LOGO);
   console.log(ui.bold.white('            MCP Server Setup Wizard by Yosef Hayim Sabag'));
-  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('grimoire-wizard') + '\n');
+  console.log(ui.dim('              Powered by ') + chalk.hex('#0064D2').bold('prompts') + '\n');
 
   console.log(ui.bold.green('\n  🎉 Setup Complete!\n'));
   showBox('Configuration Summary', [
@@ -872,7 +872,7 @@ function parseArgs(): { help: boolean; quick: boolean; diagnose: boolean } {
 
 function showHelp(): void {
   console.log(`
-${chalk.bold('eBay MCP Server Setup')}  ${chalk.dim('powered by grimoire-wizard')}
+${chalk.bold('eBay MCP Server Setup')}  ${chalk.dim('interactive setup')}
 
 ${chalk.bold('Usage:')}
   npm run setup [options]
