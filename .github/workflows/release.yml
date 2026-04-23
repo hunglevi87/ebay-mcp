@@ -1,41 +1,25 @@
-# Automated Release Workflow
-# -------------------------
-# Bumps version, creates Git tag, and publishes a GitHub Release
-# when a PR is merged into `main` or a commit is pushed directly.
-#
-# Version bump is determined by PR labels (or defaults to patch for direct pushes):
-#   - `major` -> breaking changes (1.0.0 -> 2.0.0)
-#   - `minor` -> new features    (1.0.0 -> 1.1.0)
-#   - `patch` -> bug fixes       (1.0.0 -> 1.0.1)  [default]
-#   - `no-release` -> skip entirely
-#
-# Notes:
-#   - Ensure labels `major`, `minor`, `patch`, `no-release` exist in your repo
-#   - npm publish is handled by publish.yml (triggered by the tag created here)
-#   - GITHUB_TOKEN won't trigger downstream workflows; use a PAT if needed
-
 name: Release
 
 on:
-  push:
-    branches: [main]
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
-  group: release
+  group: release-main
   cancel-in-progress: false
 
 jobs:
   release:
     if: >
-      (github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore(release):')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true &&
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
        !contains(github.event.pull_request.labels.*.name, 'no-release'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -51,8 +35,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: "pnpm"
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Configure Git
         run: |
@@ -73,19 +61,19 @@ jobs:
         if: steps.skip_check.outputs.skip != 'true'
         id: desc
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "title=$(git log -1 --pretty=format:'%s')" >> "$GITHUB_OUTPUT"
-          else
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "title=${{ github.event.pull_request.title }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "title=Manual release" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Determine version bump
         if: steps.skip_check.outputs.skip != 'true'
         id: bump
         env:
-          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name || '') }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=patch" >> "$GITHUB_OUTPUT"
           elif echo "$LABELS" | grep -q '"major"'; then
             echo "type=major" >> "$GITHUB_OUTPUT"
@@ -99,13 +87,33 @@ jobs:
         if: steps.skip_check.outputs.skip != 'true'
         id: version
         run: |
-          if ! node -e "const p = require('./package.json'); if (!p.version) process.exit(1);" 2>/dev/null; then
-            echo "No version found in package.json - initializing to 0.1.0"
-            npm pkg set version=0.1.0
+          CURRENT=$(node -p "require('./package.json').version")
+          CURRENT_TAG="v${CURRENT}"
+
+          if git rev-parse "${CURRENT_TAG}" >/dev/null 2>&1; then
+            echo "v${CURRENT} already tagged - bumping ${{ steps.bump.outputs.type }}"
+            npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+          else
+            echo "v${CURRENT} not tagged yet - using as-is"
           fi
-          NEW_VERSION=$(npm version ${{ steps.bump.outputs.type }} --no-git-tag-version)
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Bumped to $NEW_VERSION (${{ steps.bump.outputs.type }})"
+
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Release tag will be ${TAG}"
+
+      - name: Type check
+        if: steps.skip_check.outputs.skip != 'true'
+        run: pnpm run typecheck
+
+      - name: Run tests
+        if: steps.skip_check.outputs.skip != 'true'
+        run: pnpm run test
+
+      - name: Build
+        if: steps.skip_check.outputs.skip != 'true'
+        run: pnpm run build
 
       - name: Build release notes from commits
         if: steps.skip_check.outputs.skip != 'true'
@@ -126,10 +134,10 @@ jobs:
             echo "body<<RELEASE_EOF"
             echo "## What Changed"
             echo ""
-            if [ "${{ github.event_name }}" = "push" ]; then
-              echo "**Direct push to ${GITHUB_REF_NAME}**"
-            else
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "**PR:** [#${PR_NUMBER} - ${PR_TITLE}](${PR_URL})"
+            else
+              echo "**Manual release triggered via workflow_dispatch**"
             fi
             echo "**Bump:** \`${BUMP_TYPE}\`"
             echo ""
@@ -143,21 +151,23 @@ jobs:
       - name: Commit version bump and create tag
         if: steps.skip_check.outputs.skip != 'true'
         run: |
-          git add package.json pnpm-lock.yaml 2>/dev/null || git add package.json
-          git commit -m "chore(release): ${{ steps.version.outputs.version }}"
-          git tag -a "${{ steps.version.outputs.version }}" \
-            -m "Release ${{ steps.version.outputs.version }} - ${{ steps.desc.outputs.title }}"
+          if ! git diff --quiet package.json 2>/dev/null || ! git diff --quiet pnpm-lock.yaml 2>/dev/null; then
+            git add package.json pnpm-lock.yaml 2>/dev/null || git add package.json
+            git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
+          fi
+
+          git tag -a "${{ steps.version.outputs.tag }}" \
+            -m "Release ${{ steps.version.outputs.tag }} - ${{ steps.desc.outputs.title }}"
           git push origin main --follow-tags
+
+      - name: Publish to npm
+        if: steps.skip_check.outputs.skip != 'true'
+        run: pnpm publish --no-git-checks --access public --provenance
 
       - name: Create GitHub Release
         if: steps.skip_check.outputs.skip != 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.version.outputs.version }}
-        run: |
-          gh release create "$TAG" \
-            --title "$TAG - ${{ steps.desc.outputs.title }}" \
-            --notes "${{ steps.notes.outputs.body }}" \
-            --latest
-
-      # npm publish is handled by publish.yml (triggered by the tag created above)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }} - ${{ steps.desc.outputs.title }}
+          body: ${{ steps.notes.outputs.body }}
