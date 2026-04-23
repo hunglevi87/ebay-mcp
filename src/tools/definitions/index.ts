@@ -57,4 +57,4 @@ export const allTools = [
 ];
 
 // Export types
-export type { ToolDefinition } from './account.js';
+export type { ToolDefinition } from '../tool-definitions.js';

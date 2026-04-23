@@ -12,10 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /** @description This method returns the <b>Public Key</b>, <b>Public Key as JWE</b>, and metadata for all keypairs associated with the application key making the call.<br/><br/><span class="tablenote"><b>Note:</b> It is important to note that <code>privateKey</code> values are <b>not</b> returned. In order to further ensure the security of confidential client information, eBay does <b>not</b> store <code>privateKey</code> values in any system. If a developer loses their <code>privateKey</code> they must generate new keypairs set using the <code>createSigningKey</code> method.</span> */
-        get: operations["getSigningKeys"];
+        get: DeveloperKeyManagementOperations["getSigningKeys"];
         put?: never;
         /** @description This method creates keypairs using one of the following ciphers:<ul><li>ED25519 (Edwards Curve)</li><li>RSA</li></ul><span class="tablenote"><b>Note:</b> The recommended signature cipher is <b>ED25519</b> (Edwards Curve) since it uses much shorter keys and therefore decreases the header size. However, for development frameworks that do not support ED25519, RSA is also supported.</span><br/>Following a successful completion, the following keys are returned:<ul><li>Private Key</li><li>Public Key</li><li>Public Key as JWE</li></ul>Once keypairs are created, developers are <b>strongly advised</b> to create and store a local copy of each keypair for future reference. Although the <b>Public Key</b>, <b>Public Key as JWE</b>, and metadata for keypairs may be retrieved by the <code>getSigningKey</code> and <code>getSigningKeys</code> methods, in order to further ensure the security of confidential client information, eBay does not store the <b>Private Key</b> value in any system. If a developer loses their <b>Private Key</b> they must generate new keypairs using the <code>createSigningKey</code> method.<br/><span class="tablenote"><b>Note:</b> For additional information about using keypairs, refer to <a href= "/develop/guides/digital-signatures-for-apis " target= "_blank ">Digital Signatures for APIs</a>.</span> */
-        post: operations["createSigningKey"];
+        post: DeveloperKeyManagementOperations["createSigningKey"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30,7 +30,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description This method returns the <b>Public Key</b>, <b>Public Key as JWE</b>, and metadata for a specified <code>signingKeyId</code> associated with the application key making the call.<br/><br/><span class="tablenote"><b>Note:</b> It is important to note that the <code>privateKey</code> value is <b>not</b> returned. In order to further ensure the security of confidential client information, eBay does <b>not</b> store the <code>privateKey</code> value in any system. If a developer loses their <code>privateKey</code> they must generate new keypairs using the <code>createSigningKey</code> method.</span> */
-        get: operations["getSigningKey"];
+        get: DeveloperKeyManagementOperations["getSigningKey"];
         put?: never;
         post?: never;
         delete?: never;
@@ -41,7 +41,7 @@ export interface paths {
     };
 }
 export type webhooks = Record<string, never>;
-export interface components {
+export interface DeveloperKeyManagementComponents {
     schemas: {
         /** @description This request creates a new signing key. */
         CreateSigningKeyRequest: {
@@ -68,7 +68,7 @@ export interface components {
             /** @description An array of request elements most closely associated to the error. */
             outputRefIds?: string[];
             /** @description An array of name/value pairs that describe details the error condition. These are useful when multiple errors are returned. */
-            parameters?: components["schemas"]["ErrorParameter"][];
+            parameters?: DeveloperKeyManagementComponents["schemas"]["ErrorParameter"][];
             /** @description Further helps indicate which subsystem the error is coming from. System subcategories include: Initialization, Serialization, Security, Monitoring, Rate Limiting, etc. */
             subdomain?: string;
         };
@@ -81,7 +81,7 @@ export interface components {
         /** @description This container stores metadata information for all keypairs that are owned by a user. */
         QuerySigningKeysResponse: {
             /** @description An array of metadata information for keypairs owned by a user. */
-            signingKeys?: components["schemas"]["SigningKey"][];
+            signingKeys?: DeveloperKeyManagementComponents["schemas"]["SigningKey"][];
         };
         /** @description This container stores metadata for a signing key. */
         SigningKey: {
@@ -114,7 +114,7 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export interface operations {
+export interface DeveloperKeyManagementOperations {
     getSigningKeys: {
         parameters: {
             query?: never;
@@ -130,7 +130,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuerySigningKeysResponse"];
+                    "application/json": DeveloperKeyManagementComponents["schemas"]["QuerySigningKeysResponse"];
                 };
             };
             /** @description Bad Request */
@@ -175,7 +175,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["CreateSigningKeyRequest"];
+                "application/json": DeveloperKeyManagementComponents["schemas"]["CreateSigningKeyRequest"];
             };
         };
         responses: {
@@ -185,7 +185,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SigningKey"];
+                    "application/json": DeveloperKeyManagementComponents["schemas"]["SigningKey"];
                 };
             };
             /** @description Bad Request */
@@ -236,7 +236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SigningKey"];
+                    "application/json": DeveloperKeyManagementComponents["schemas"]["SigningKey"];
                 };
             };
             /** @description Bad Request */

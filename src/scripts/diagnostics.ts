@@ -7,13 +7,15 @@
  */
 
 import chalk from 'chalk';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { runSecurityChecks, displaySecurityResults } from '../utils/security-checker.js';
 import { validateSetup, displayRecommendations } from '../utils/setup-validator.js';
+import { parseEnvFile } from '../utils/env-parser.js';
 import { detectLLMClients } from '../utils/llm-client-detector.js';
 import { displayScopeVerification, parseScopeString } from '../utils/scope-helper.js';
+import { readEnvironment } from './setup-shared.js';
 import { EbaySellerApi } from '../api/index.js';
 import type { EbayConfig } from '../types/ebay.js';
 
@@ -40,44 +42,6 @@ interface DiagnosticReport {
     hasAppToken: boolean;
     scopes?: string[];
   };
-}
-
-/**
- * Parse .env file
- */
-function parseEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!existsSync(filePath)) {
-    return env;
-  }
-
-  const content = readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-
-    const match = /^([^=]+)=(.*)$/.exec(trimmed);
-    if (match) {
-      const key = match[1].trim();
-      let value = match[2].trim();
-
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-
-      env[key] = value;
-    }
-  }
-
-  return env;
 }
 
 /**
@@ -274,7 +238,7 @@ async function generateDiagnosticReport(exportPath?: string): Promise<Diagnostic
       clientId: envVars.EBAY_CLIENT_ID,
       clientSecret: envVars.EBAY_CLIENT_SECRET,
       redirectUri: envVars.EBAY_REDIRECT_URI,
-      environment: (envVars.EBAY_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
+      environment: readEnvironment(envVars.EBAY_ENVIRONMENT),
     };
 
     const authResult = await testEbayAuthentication(config);
@@ -341,7 +305,7 @@ async function runDiagnostics(exportReport = false): Promise<void> {
       clientId: envVars.EBAY_CLIENT_ID,
       clientSecret: envVars.EBAY_CLIENT_SECRET,
       redirectUri: envVars.EBAY_REDIRECT_URI,
-      environment: (envVars.EBAY_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
+      environment: readEnvironment(envVars.EBAY_ENVIRONMENT),
     };
 
     await displayAuthenticationTest(config);

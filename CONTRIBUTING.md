@@ -177,7 +177,8 @@ src/
 ├── auth/             # OAuth & token management
 ├── tools/            # MCP tool definitions
 ├── types/            # TypeScript types & enums
-├── utils/            # Zod validation schemas
+├── schemas/          # Zod validation schemas
+├── utils/            # Shared utilities
 └── config/           # Environment configuration
 
 tests/
@@ -234,14 +235,13 @@ chore(deps): update @modelcontextprotocol/sdk to 1.21.1
 ```typescript
 import { z } from 'zod';
 import { MarketplaceId } from '@/types/ebay-enums.js';
-import type { InventoryItem } from '@/types/sell_inventory.js';
 
 /**
  * Get inventory item by SKU
  * @param sku - The seller-defined SKU
  * @returns The inventory item details
  */
-async getInventoryItem(sku: string): Promise<InventoryItem> {
+async getInventoryItem(sku: string): Promise<unknown> {
   const validated = getInventoryItemSchema.parse({ sku });
   return this.client.get(`/sell/inventory/v1/inventory_item/${sku}`);
 }

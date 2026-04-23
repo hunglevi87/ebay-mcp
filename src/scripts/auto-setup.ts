@@ -16,6 +16,8 @@ import { homedir, platform } from 'os';
 
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
+import type { DetectedMCPClient, MCPServerConfig } from '../utils/llm-client-detector.js';
+import { isRecord } from '../utils/type-guards.js';
 
 // Load environment variables silently
 config({ quiet: true });
@@ -68,14 +70,34 @@ function printHeader(message: string): void {
 // MCP Client Detection
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface MCPClient {
-  name: string;
-  configPath: string;
-  detected: boolean;
+interface MCPClient extends DetectedMCPClient {
   configGenerated?: boolean;
 }
 
-function getConfigPaths(): Record<string, string> {
+function readRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  return {};
+}
+
+function isMCPServerConfig(value: unknown): value is MCPServerConfig {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof Reflect.get(value, 'command') === 'string'
+  );
+}
+
+function readMcpServerConfigArray(value: unknown): MCPServerConfig[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isMCPServerConfig);
+}
+
+function getAutoSetupConfigPaths(): Record<string, string> {
   const home = homedir();
   const os = platform();
 
@@ -154,7 +176,7 @@ function getConfigPaths(): Record<string, string> {
 }
 
 function detectMCPClients(): MCPClient[] {
-  const configPaths = getConfigPaths();
+  const configPaths = getAutoSetupConfigPaths();
   const clients: MCPClient[] = [];
 
   for (const [name, configPath] of Object.entries(configPaths)) {
@@ -173,56 +195,41 @@ function detectMCPClients(): MCPClient[] {
 // Configuration Generation
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface MCPServerConfig {
-  command: string;
-  args: string[];
-  env: {
-    EBAY_CLIENT_ID: string;
-    EBAY_CLIENT_SECRET: string;
-    EBAY_ENVIRONMENT: string;
-    EBAY_REDIRECT_URI?: string;
-    EBAY_MARKETPLACE_ID?: string;
-    EBAY_CONTENT_LANGUAGE?: string;
-    EBAY_USER_ACCESS_TOKEN?: string;
-    EBAY_USER_REFRESH_TOKEN?: string;
-    EBAY_APP_ACCESS_TOKEN?: string;
-  };
-}
-
 function generateMCPServerConfig(): MCPServerConfig {
   const buildPath = join(PROJECT_ROOT, 'build/index.js');
 
+  const envConfig: Record<string, string> = {
+    EBAY_CLIENT_ID: process.env.EBAY_CLIENT_ID || '',
+    EBAY_CLIENT_SECRET: process.env.EBAY_CLIENT_SECRET || '',
+    EBAY_ENVIRONMENT: process.env.EBAY_ENVIRONMENT || 'sandbox',
+  };
   const config: MCPServerConfig = {
     command: 'node',
     args: [buildPath],
-    env: {
-      EBAY_CLIENT_ID: process.env.EBAY_CLIENT_ID || '',
-      EBAY_CLIENT_SECRET: process.env.EBAY_CLIENT_SECRET || '',
-      EBAY_ENVIRONMENT: process.env.EBAY_ENVIRONMENT || 'sandbox',
-    },
+    env: envConfig,
   };
 
   // Add optional environment variables if they exist
   if (process.env.EBAY_REDIRECT_URI) {
-    config.env.EBAY_REDIRECT_URI = process.env.EBAY_REDIRECT_URI;
+    envConfig.EBAY_REDIRECT_URI = process.env.EBAY_REDIRECT_URI;
   }
   if (process.env.EBAY_MARKETPLACE_ID) {
-    config.env.EBAY_MARKETPLACE_ID = process.env.EBAY_MARKETPLACE_ID;
+    envConfig.EBAY_MARKETPLACE_ID = process.env.EBAY_MARKETPLACE_ID;
   }
   if (process.env.EBAY_CONTENT_LANGUAGE) {
-    config.env.EBAY_CONTENT_LANGUAGE = process.env.EBAY_CONTENT_LANGUAGE;
+    envConfig.EBAY_CONTENT_LANGUAGE = process.env.EBAY_CONTENT_LANGUAGE;
   }
 
   if (process.env.EBAY_USER_ACCESS_TOKEN) {
-    config.env.EBAY_USER_ACCESS_TOKEN = process.env.EBAY_USER_ACCESS_TOKEN;
+    envConfig.EBAY_USER_ACCESS_TOKEN = process.env.EBAY_USER_ACCESS_TOKEN;
   }
 
   if (process.env.EBAY_USER_REFRESH_TOKEN) {
-    config.env.EBAY_USER_REFRESH_TOKEN = process.env.EBAY_USER_REFRESH_TOKEN;
+    envConfig.EBAY_USER_REFRESH_TOKEN = process.env.EBAY_USER_REFRESH_TOKEN;
   }
 
   if (process.env.EBAY_APP_ACCESS_TOKEN) {
-    config.env.EBAY_APP_ACCESS_TOKEN = process.env.EBAY_APP_ACCESS_TOKEN;
+    envConfig.EBAY_APP_ACCESS_TOKEN = process.env.EBAY_APP_ACCESS_TOKEN;
   }
 
   return config;
@@ -241,7 +248,7 @@ function updateClientConfig(client: MCPClient, serverConfig: MCPServerConfig): b
     if (existsSync(client.configPath)) {
       try {
         const existing = readFileSync(client.configPath, 'utf-8');
-        config = JSON.parse(existing) as Record<string, unknown>;
+        config = readRecord(JSON.parse(existing));
       } catch (error) {
         printWarning(`Invalid JSON in ${client.configPath}, creating backup and new config`);
         const backup = `${client.configPath}.backup.${Date.now()}`;
@@ -258,7 +265,7 @@ function updateClientConfig(client: MCPClient, serverConfig: MCPServerConfig): b
         if (!config.context_servers || typeof config.context_servers !== 'object') {
           config.context_servers = {};
         }
-        const contextServers = config.context_servers as Record<string, unknown>;
+        const contextServers = readRecord(config.context_servers);
         contextServers['ebay-mcp-server'] = {
           command: {
             path: serverConfig.command,
@@ -275,14 +282,14 @@ function updateClientConfig(client: MCPClient, serverConfig: MCPServerConfig): b
         if (!config.experimental || typeof config.experimental !== 'object') {
           config.experimental = {};
         }
-        const experimental = config.experimental as Record<string, unknown>;
+        const experimental = readRecord(config.experimental);
         if (
           !experimental.modelContextProtocolServers ||
           !Array.isArray(experimental.modelContextProtocolServers)
         ) {
           experimental.modelContextProtocolServers = [];
         }
-        const mcpServers = experimental.modelContextProtocolServers as MCPServerConfig[];
+        const mcpServers = readMcpServerConfigArray(experimental.modelContextProtocolServers);
 
         // Check if eBay server already exists and update/add
         const existingIndex = mcpServers.findIndex(
@@ -301,7 +308,7 @@ function updateClientConfig(client: MCPClient, serverConfig: MCPServerConfig): b
         if (!config.mcpServers || typeof config.mcpServers !== 'object') {
           config.mcpServers = {};
         }
-        const mcpServers = config.mcpServers as Record<string, unknown>;
+        const mcpServers = readRecord(config.mcpServers);
         mcpServers['ebay-mcp-server'] = serverConfig;
         break;
       }
@@ -338,7 +345,7 @@ function validateTokens(): boolean {
 // Validation
 // ═══════════════════════════════════════════════════════════════════════════
 
-function validateEnvironment(): { valid: boolean; errors: string[]; warnings: string[] } {
+function validateAutoSetupEnvironment(): { valid: boolean; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -391,7 +398,7 @@ async function main(): Promise<void> {
 
   // Step 1: Validate environment
   printInfo('Step 1/4: Validating environment configuration...');
-  const validation = validateEnvironment();
+  const validation = validateAutoSetupEnvironment();
 
   if (validation.errors.length > 0) {
     printError('Environment validation failed:');

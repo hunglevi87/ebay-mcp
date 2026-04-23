@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import * as jose from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type {
   VerifiedToken,
   TokenIntrospectionRequest,
@@ -188,10 +188,10 @@ export class TokenVerifier {
 
     try {
       // Get JWKS from authorization server
-      const JWKS = jose.createRemoteJWKSet(new URL(this.metadata.jwks_uri));
+      const JWKS = createRemoteJWKSet(new URL(this.metadata.jwks_uri));
 
       // Verify JWT
-      const { payload } = await jose.jwtVerify(token, JWKS, {
+      const { payload } = await jwtVerify(token, JWKS, {
         issuer: this.metadata.issuer,
         audience: this.config.expectedAudience,
       });
@@ -216,9 +216,16 @@ export class TokenVerifier {
         }
       }
 
+      const clientId =
+        typeof payload.client_id === 'string'
+          ? payload.client_id
+          : typeof payload.azp === 'string'
+            ? payload.azp
+            : 'unknown';
+
       return {
         token,
-        clientId: (payload.client_id as string) || (payload.azp as string) || 'unknown',
+        clientId,
         scopes,
         expiresAt: payload.exp,
         audience: payload.aud,

@@ -12,17 +12,7 @@ import {
   adResponseSchema,
   baseResponseSchema,
 } from '@/schemas/marketing/marketing.js';
-import { OutputArgs, ToolAnnotations } from '../tool-definitions.js';
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, z.ZodTypeAny>;
-  title?: string;
-  outputSchema?: OutputArgs;
-  annotations?: ToolAnnotations;
-  _meta?: Record<string, unknown>;
-}
+import type { OutputArgs, ToolDefinition } from '../tool-definitions.js';
 
 // Reusable schemas
 const campaignIdSchema = z.string().describe('Campaign ID');

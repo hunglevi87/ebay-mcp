@@ -96,10 +96,10 @@ describe('TradingApiClient', () => {
     const sandboxClient = new TradingApiClient(
       createMockRestClient('sandbox') as unknown as EbayApiClient
     );
-    expect(sandboxClient.getBaseUrl()).toBe('https://api.sandbox.ebay.com');
+    expect(sandboxClient.getTradingBaseUrl()).toBe('https://api.sandbox.ebay.com');
   });
 
   it('should use production URL for production environment', () => {
-    expect(client.getBaseUrl()).toBe('https://api.ebay.com');
+    expect(client.getTradingBaseUrl()).toBe('https://api.ebay.com');
   });
 });

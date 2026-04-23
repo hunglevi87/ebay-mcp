@@ -21,12 +21,19 @@ export interface EbayConfig {
  * OAuth token response from eBay
  * Supports both client credentials and authorization code grants
  */
-export interface EbayAuthToken {
+export interface EbayTokenCore {
   accessToken: string;
-  tokenType: string;
-  expiresIn: number;
   refreshToken: string;
+  expiresIn: number;
   refreshTokenExpiresIn?: number;
+}
+
+/**
+ * OAuth token response from eBay
+ * Supports both client credentials and authorization code grants
+ */
+export interface EbayAuthToken extends EbayTokenCore {
+  tokenType: string;
 }
 
 /**

@@ -46,6 +46,7 @@ import {
 } from '../utils/scope-helper.js';
 import { detectLLMClients, configureLLMClient } from '../utils/llm-client-detector.js';
 import { validateSetup, displayRecommendations } from '../utils/setup-validator.js';
+import { loadExistingConfig, readEnvironment } from './setup-shared.js';
 import { EbaySellerApi } from '../api/index.js';
 import { EbayOAuthClient } from '../auth/oauth.js';
 import type { EbayConfig } from '../types/ebay.js';
@@ -77,7 +78,14 @@ interface CLIArgs {
   environment?: 'sandbox' | 'production';
 }
 
-function parseArgs(): CLIArgs {
+function readOptionalEnvironment(value?: string): 'sandbox' | 'production' | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return readEnvironment(value);
+}
+
+function parseInteractiveArgs(): CLIArgs {
   const args = process.argv.slice(2);
   const envArg = args.find((arg) => arg.startsWith('--env='));
 
@@ -86,11 +94,11 @@ function parseArgs(): CLIArgs {
     diagnose: args.includes('--diagnose') || args.includes('-d'),
     firstTime: args.includes('--first-time') || args.includes('-f'),
     skipChecks: args.includes('--skip-checks'),
-    environment: envArg ? (envArg.split('=')[1] as 'sandbox' | 'production') : undefined,
+    environment: readOptionalEnvironment(envArg?.split('=')[1]),
   };
 }
 
-function showHelp() {
+function showInteractiveHelp() {
   console.log(chalk.bold.cyan('\n📖 eBay API MCP Server Setup Help\n'));
   console.log(chalk.white('Usage:'));
   console.log(chalk.gray('  npx ebay-mcp [options]\n'));
@@ -154,28 +162,6 @@ function displayLogo() {
 
 function validateRequired(value: string): boolean | string {
   return value.trim().length > 0 || 'This field is required';
-}
-
-function loadExistingConfig(): Record<string, string> {
-  const envPath = join(PROJECT_ROOT, '.env');
-  const config: Record<string, string> = {};
-
-  if (existsSync(envPath)) {
-    const envContent = readFileSync(envPath, 'utf-8');
-    const lines = envContent.split('\n');
-
-    for (const line of lines) {
-      if (line.trim() && !line.startsWith('#')) {
-        const [key, ...valueParts] = line.split('=');
-        const value = valueParts.join('=').trim();
-        if (key && value && !value.includes('_here')) {
-          config[key.trim()] = value;
-        }
-      }
-    }
-  }
-
-  return config;
 }
 
 function generateEnvFile(config: Record<string, string>, environment: string): void {
@@ -297,7 +283,7 @@ async function validateAndGenerateTokens(config: Record<string, string>): Promis
       clientId: config.EBAY_CLIENT_ID,
       clientSecret: config.EBAY_CLIENT_SECRET,
       redirectUri: config.EBAY_REDIRECT_URI,
-      environment: (config.EBAY_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
+      environment: readEnvironment(config.EBAY_ENVIRONMENT),
     };
 
     // Set up OAuth client with refresh token
@@ -664,7 +650,7 @@ async function runInteractiveSetup(args: CLIArgs) {
   }
 
   // Check if user needs first-time guide
-  const existingConfig = loadExistingConfig();
+  const existingConfig = loadExistingConfig(PROJECT_ROOT);
   const hasExisting = Object.keys(existingConfig).length > 0;
 
   if (!hasExisting) {
@@ -796,7 +782,7 @@ async function runInteractiveSetup(args: CLIArgs) {
     clientId: credentials.EBAY_CLIENT_ID,
     clientSecret: credentials.EBAY_CLIENT_SECRET,
     redirectUri: credentials.EBAY_REDIRECT_URI,
-    environment: environment as 'sandbox' | 'production',
+    environment: readEnvironment(environment),
   };
 
   if (tokenMethod.method === 'interactive' || tokenMethod.method === 'manual') {
@@ -917,10 +903,10 @@ async function runInteractiveSetup(args: CLIArgs) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function main() {
-  const args = parseArgs();
+  const args = parseInteractiveArgs();
 
   if (args.help) {
-    showHelp();
+    showInteractiveHelp();
     process.exit(0);
   }
 

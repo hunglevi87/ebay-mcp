@@ -194,9 +194,9 @@ export function displayScopeVerification(
 }
 
 /**
- * Get scope description
+ * Get scope description for a full OAuth scope URL.
  */
-export function getScopeDescription(scope: string): string {
+export function describeScopeFromOAuthUrl(scope: string): string {
   const descriptions: Record<string, string> = {
     'https://api.ebay.com/oauth/api_scope/sell.inventory': 'Manage inventory items and offers',
     'https://api.ebay.com/oauth/api_scope/sell.fulfillment': 'Manage orders and shipping',

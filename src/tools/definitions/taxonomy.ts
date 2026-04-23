@@ -1,31 +1,7 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { OutputArgs, ToolDefinition } from '../tool-definitions.js';
 
-export interface OutputArgs {
-  [x: string]: unknown;
-  type: 'object';
-  properties?: Record<string, object>;
-  required?: string[];
-}
-
-export interface ToolAnnotations {
-  [x: string]: unknown;
-  title?: string;
-  readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
-}
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, z.ZodTypeAny>;
-  title?: string;
-  outputSchema?: OutputArgs;
-  annotations?: ToolAnnotations;
-  _meta?: Record<string, unknown>;
-}
 export const taxonomyTools: ToolDefinition[] = [
   {
     name: 'ebay_get_default_category_tree_id',

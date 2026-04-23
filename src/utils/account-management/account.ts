@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { idSchema } from '../schema-helpers.js';
 
 /**
  * Zod schemas for Account API input validation
@@ -6,15 +7,6 @@ import { z } from 'zod';
  * OpenAPI spec: docs/sell-apps/account-management/sell_account_v1_oas3.json
  * Types from: src/types/sell_account_v1_oas3.ts
  */
-
-// Reusable schema for ID parameters
-const idSchema = (name: string, description: string) =>
-  z.string({
-    message: `${name} is required`,
-    required_error: `${name.toLowerCase().replace(/\s+/g, '_')} is required`,
-    invalid_type_error: `${name.toLowerCase().replace(/\s+/g, '_')} must be a string`,
-    description,
-  });
 
 // Reusable schema for optional marketplace_id parameter
 const marketplaceIdSchema = z

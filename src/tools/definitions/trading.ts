@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from './account.js';
+import type { ToolDefinition } from '../tool-definitions.js';
 
 export const tradingTools: ToolDefinition[] = [
   {

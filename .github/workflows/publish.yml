@@ -3,12 +3,12 @@ name: Release & Publish
 # Auto-releases on every push to main.
 #
 # Version bump is determined by conventional commit prefix:
-#   feat!: / BREAKING CHANGE  →  major
-#   feat:                     →  minor
-#   everything else           →  patch
+#   feat!: / BREAKING CHANGE  ->  major
+#   feat:                     ->  minor
+#   everything else           ->  patch
 #
 # If package.json already has an un-tagged version (manual bump),
-# that version is used as-is — no auto-bump.
+# that version is used as-is - no auto-bump.
 #
 # Skip release: add [skip release] to the commit message.
 
@@ -78,10 +78,10 @@ jobs:
           TAG="v${CURRENT}"
 
           if git rev-parse "${TAG}" >/dev/null 2>&1; then
-            echo "v${CURRENT} already tagged — auto-bumping ${{ steps.bump.outputs.type }}"
+            echo "v${CURRENT} already tagged - auto-bumping ${{ steps.bump.outputs.type }}"
             npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
           else
-            echo "v${CURRENT} is a new version — using as-is"
+            echo "v${CURRENT} is a new version - using as-is"
           fi
 
           VERSION=$(node -p "require('./package.json').version")

@@ -54,4 +54,4 @@ All tools target fixed-price listings. Auction support is out of scope for now.
 
 ## Workflow
 
-Build on fork `longrackslabs/ebay-mcp`, new branch `feat/trading-api`. PR to upstream `YosefHayim/ebay-mcp` when proven.
+Build on your fork of `ebay-mcp`, create branch `feat/trading-api`, then open a PR to `YosefHayim/ebay-mcp` when proven.

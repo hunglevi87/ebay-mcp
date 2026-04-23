@@ -191,7 +191,7 @@ export function validateEnvironmentConfig(): {
 export function getEbayConfig(): EbayConfig {
   const clientId = process.env.EBAY_CLIENT_ID ?? '';
   const clientSecret = process.env.EBAY_CLIENT_SECRET ?? '';
-  const environment = (process.env.EBAY_ENVIRONMENT ?? 'sandbox') as 'production' | 'sandbox';
+  const environment = process.env.EBAY_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
   const accessToken = process.env.EBAY_USER_ACCESS_TOKEN ?? '';
   const refreshToken = process.env.EBAY_USER_REFRESH_TOKEN ?? '';
   const appAccessToken = process.env.EBAY_APP_ACCESS_TOKEN ?? '';

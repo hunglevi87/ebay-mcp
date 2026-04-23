@@ -9,11 +9,14 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir, platform } from 'os';
 
-export interface LLMClient {
+export interface DetectedMCPClient {
   name: string;
-  displayName: string;
   configPath: string;
   detected: boolean;
+}
+
+export interface LLMClient extends DetectedMCPClient {
+  displayName: string;
   configExists: boolean;
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { dirname, join, resolve } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { homedir, platform } from 'os';
 
 import axios from 'axios';
@@ -11,6 +11,11 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { getOAuthAuthorizationUrl } from '../config/environment.js';
 import { defineWizard, runWizard, ClackRenderer } from 'grimoire-wizard';
+import { loadExistingConfig } from './setup-shared.js';
+import { configureLLMClient, detectLLMClients } from '../utils/llm-client-detector.js';
+import { runSecurityChecks, displaySecurityResults } from '../utils/security-checker.js';
+import { validateSetup, displayRecommendations } from '../utils/setup-validator.js';
+import type { EbayTokenCore } from '../types/ebay.js';
 
 config({ quiet: true });
 
@@ -19,14 +24,6 @@ checkForUpdates();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '../..');
-
-interface LLMClient {
-  name: string;
-  displayName: string;
-  configPath: string;
-  detected: boolean;
-  configExists: boolean;
-}
 
 const MARKETPLACE_OPTIONS: { value: string; label: string }[] = [
   { value: 'EBAY_US', label: 'EBAY_US — United States' },
@@ -103,10 +100,7 @@ function parseAuthorizationCode(input: string): string | null {
   return null;
 }
 
-interface TokenExchangeResult {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
+interface TokenExchangeResult extends EbayTokenCore {
   refreshTokenExpiresIn: number;
 }
 
@@ -201,100 +195,11 @@ async function fetchEbayUserInfo(
   return response.data;
 }
 
-function getConfigPaths(): Record<string, { display: string; path: string }> {
-  const home = homedir();
-  const os = platform();
-  const paths: Record<string, { display: string; path: string }> = {};
-  if (os === 'darwin') {
-    paths.claude = {
-      display: 'Claude Desktop',
-      path: join(home, 'Library/Application Support/Claude/claude_desktop_config.json'),
-    };
-    paths.cline = {
-      display: 'Cline (VSCode)',
-      path: join(
-        home,
-        'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
-      ),
-    };
-  } else if (os === 'win32') {
-    paths.claude = {
-      display: 'Claude Desktop',
-      path: join(home, 'AppData/Roaming/Claude/claude_desktop_config.json'),
-    };
-    paths.cline = {
-      display: 'Cline (VSCode)',
-      path: join(
-        home,
-        'AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
-      ),
-    };
-  } else {
-    paths.claude = {
-      display: 'Claude Desktop',
-      path: join(home, '.config/Claude/claude_desktop_config.json'),
-    };
-    paths.cline = {
-      display: 'Cline (VSCode)',
-      path: join(
-        home,
-        '.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
-      ),
-    };
-  }
-  paths.continue = { display: 'Continue.dev', path: join(home, '.continue/config.json') };
-  return paths;
-}
-
-function detectLLMClients(): LLMClient[] {
-  return Object.entries(getConfigPaths()).map(([name, info]) => ({
-    name,
-    displayName: info.display,
-    configPath: info.path,
-    detected: existsSync(dirname(info.path)),
-    configExists: existsSync(info.path),
-  }));
-}
-
-function configureLLMClient(client: LLMClient, projectRoot: string): boolean {
-  try {
-    const configDir = dirname(client.configPath);
-    if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true });
-    interface McpConfig {
-      mcpServers?: Record<string, unknown>;
-      experimental?: { modelContextProtocolServers?: unknown[] };
-      [key: string]: unknown;
-    }
-    let existingConfig: McpConfig = {};
-    if (existsSync(client.configPath)) {
-      try {
-        existingConfig = JSON.parse(readFileSync(client.configPath, 'utf-8')) as McpConfig;
-      } catch {
-        existingConfig = {};
-      }
-    }
-    const serverConfig = { command: 'node', args: [join(projectRoot, 'build/index.js')] };
-    if (client.name === 'continue') {
-      if (!existingConfig.experimental) existingConfig.experimental = {};
-      if (!existingConfig.experimental.modelContextProtocolServers)
-        existingConfig.experimental.modelContextProtocolServers = [];
-      const servers = existingConfig.experimental.modelContextProtocolServers as unknown[];
-      const idx = servers.findIndex((s: unknown) =>
-        (s as { args?: string[] })?.args?.[0]?.includes('ebay-mcp'),
-      );
-      if (idx >= 0) servers[idx] = serverConfig;
-      else servers.push(serverConfig);
-    } else {
-      if (!existingConfig.mcpServers) existingConfig.mcpServers = {};
-      existingConfig.mcpServers['ebay'] = serverConfig;
-    }
-    writeFileSync(client.configPath, JSON.stringify(existingConfig, null, 2));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+/**
+ * Resolve Claude Desktop config path for the current operating system.
+ *
+ * @returns Absolute path to Claude Desktop config JSON.
+ */
 function getClaudeDesktopConfigPath(): string {
   const home = homedir();
   const os = platform();
@@ -304,10 +209,22 @@ function getClaudeDesktopConfigPath(): string {
   return join(home, '.config/Claude/claude_desktop_config.json');
 }
 
+/**
+ * Check whether Claude Desktop appears to be installed locally.
+ *
+ * @returns `true` when the Claude Desktop config directory exists.
+ */
 function isClaudeDesktopInstalled(): boolean {
   return existsSync(dirname(getClaudeDesktopConfigPath()));
 }
 
+/**
+ * Merge eBay MCP settings into Claude Desktop config.
+ *
+ * @param envConfig Current setup environment values to persist.
+ * @param environment Target eBay environment name.
+ * @returns Update result with success state, config path, and optional error details.
+ */
 function updateClaudeDesktopConfig(
   envConfig: Record<string, string>,
   environment: string,
@@ -362,20 +279,6 @@ function updateClaudeDesktopConfig(
   } catch (error) {
     return { success: false, configPath, error: error instanceof Error ? error.message : 'Unknown' };
   }
-}
-
-function loadExistingConfig(): Record<string, string> {
-  const envPath = join(PROJECT_ROOT, '.env');
-  const envConfig: Record<string, string> = {};
-  if (!existsSync(envPath)) return envConfig;
-  for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
-    if (line.trim() && !line.startsWith('#')) {
-      const [key, ...valueParts] = line.split('=');
-      const value = valueParts.join('=').trim();
-      if (key && value && !value.includes('_here')) envConfig[key.trim()] = value;
-    }
-  }
-  return envConfig;
 }
 
 function formatDate(date: Date): string {
@@ -447,7 +350,7 @@ function showBox(title: string, content: string[]): void {
   console.log(`  ${ui.dim('└' + line + '┘')}\n`);
 }
 
-function showSpinner(message: string): () => void {
+function showSetupProgress(message: string): () => void {
   console.log(`  ⠋  ${message}...`);
   return () => {};
 }
@@ -481,7 +384,7 @@ function displayUserInfo(userInfo: EbayUserInfo): void {
 // ─── Grimoire wizard ──────────────────────────────────────────────────────────
 
 export async function runSetup(): Promise<void> {
-  const existingConfig = loadExistingConfig();
+  const existingConfig = loadExistingConfig(PROJECT_ROOT);
   const detectedClients = detectLLMClients();
   const availableClients = detectedClients.filter((c) => c.detected);
 
@@ -708,7 +611,7 @@ export async function runSetup(): Promise<void> {
         const method = value as string;
 
         if (method === 'keep') {
-          const stopSpinner = showSpinner('Verifying existing refresh token...');
+          const stopSpinner = showSetupProgress('Verifying existing refresh token...');
           try {
             const { accessToken, userInfo } = await verifyRefreshToken(
               existingConfig.EBAY_USER_REFRESH_TOKEN,
@@ -773,7 +676,7 @@ export async function runSetup(): Promise<void> {
       if (stepId === 'oauth-token') {
         const rawToken = String(value).trim().replace(/^["']|["']$/g, '');
         tokens.refreshToken = rawToken;
-        const stopSpinner = showSpinner('Verifying refresh token...');
+        const stopSpinner = showSetupProgress('Verifying refresh token...');
         try {
           const { accessToken, userInfo } = await verifyRefreshToken(
             rawToken, clientId, clientSecret, environment,
@@ -811,7 +714,7 @@ export async function runSetup(): Promise<void> {
       if (stepId === 'oauth-code') {
         const authCode = parseAuthorizationCode(String(value));
         if (!authCode) return;
-        const stopSpinner = showSpinner('Exchanging authorization code for tokens...');
+        const stopSpinner = showSetupProgress('Exchanging authorization code for tokens...');
         try {
           const result = await exchangeAuthorizationCode(
             authCode, clientId, clientSecret, redirectUri, environment,
@@ -872,9 +775,9 @@ export async function runSetup(): Promise<void> {
         for (const name of selectedNames) {
           const client = detectedClients.find((c) => c.name === name);
           if (!client) continue;
-          const stopSpinner = showSpinner(`Configuring ${client.displayName}...`);
+          const stopSpinner = showSetupProgress(`Configuring ${client.displayName}...`);
           await new Promise((r) => setTimeout(r, 400));
-          const success = configureLLMClient(client, PROJECT_ROOT);
+          const success = configureLLMClient(client.name, PROJECT_ROOT);
           stopSpinner();
           if (success) showSuccess(`Configured ${client.displayName}`);
           else showError(`Failed to configure ${client.displayName}`);
@@ -918,7 +821,7 @@ export async function runSetup(): Promise<void> {
     ...(tokens.appAccessToken ? { EBAY_APP_ACCESS_TOKEN: tokens.appAccessToken } : {}),
   };
 
-  const stopSave = showSpinner('Saving configuration...');
+  const stopSave = showSetupProgress('Saving configuration...');
   await new Promise((r) => setTimeout(r, 300));
   saveConfig(finalConfig, environment);
   stopSave();
@@ -995,9 +898,6 @@ async function main(): Promise<void> {
   }
 
   if (args.diagnose) {
-    const { runSecurityChecks, displaySecurityResults } =
-      await import('../utils/security-checker.js');
-    const { validateSetup, displayRecommendations } = await import('../utils/setup-validator.js');
     console.clear();
     console.log(ui.bold.cyan('  Running Diagnostics...\n'));
     const securityResults = await runSecurityChecks(PROJECT_ROOT);

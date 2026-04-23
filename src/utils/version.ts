@@ -15,6 +15,17 @@ interface PackageJson {
 
 let cachedPackageJson: PackageJson | null = null;
 
+function isPackageJson(value: unknown): value is PackageJson {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return (
+    typeof Reflect.get(value, 'name') === 'string' &&
+    typeof Reflect.get(value, 'version') === 'string'
+  );
+}
+
 export function getPackageJson(): PackageJson {
   if (cachedPackageJson) {
     return cachedPackageJson;
@@ -22,7 +33,13 @@ export function getPackageJson(): PackageJson {
 
   try {
     const content = readFileSync(PACKAGE_JSON_PATH, 'utf-8');
-    cachedPackageJson = JSON.parse(content) as PackageJson;
+    const parsed = JSON.parse(content);
+    if (isPackageJson(parsed)) {
+      cachedPackageJson = parsed;
+      return cachedPackageJson;
+    }
+
+    cachedPackageJson = { name: 'ebay-mcp', version: '0.0.0' };
     return cachedPackageJson;
   } catch {
     return { name: 'ebay-mcp', version: '0.0.0' };

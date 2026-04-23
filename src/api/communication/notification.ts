@@ -1,4 +1,5 @@
 import type { EbayApiClient } from '../client.js';
+import { assertRequiredString, getPathWithContextError } from './shared.js';
 
 /**
  * Notification API - Event notifications and subscriptions
@@ -11,20 +12,16 @@ export class NotificationApi {
 
   /**
    * Get public key for validating notifications
+   * @param publicKeyId Public key identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getPublicKey(publicKeyId: string) {
-    if (!publicKeyId || typeof publicKeyId !== 'string') {
-      throw new Error('publicKeyId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/public_key/${publicKeyId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get public key: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(publicKeyId, 'publicKeyId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/public_key/${publicKeyId}`,
+      'Failed to get public key'
+    );
   }
 
   /**
@@ -32,13 +29,7 @@ export class NotificationApi {
    * @throws Error if the request fails
    */
   async getConfig() {
-    try {
-      return await this.client.get(`${this.basePath}/config`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get config: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    return await getPathWithContextError(this.client, `${this.basePath}/config`, 'Failed to get config');
   }
 
   /**
@@ -79,20 +70,16 @@ export class NotificationApi {
 
   /**
    * Get destination
+   * @param destinationId Destination identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getDestination(destinationId: string) {
-    if (!destinationId || typeof destinationId !== 'string') {
-      throw new Error('destinationId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/destination/${destinationId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get destination: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(destinationId, 'destinationId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/destination/${destinationId}`,
+      'Failed to get destination'
+    );
   }
 
   /**
@@ -204,20 +191,16 @@ export class NotificationApi {
   /**
    * Get a subscription
    * Endpoint: GET /subscription/{subscription_id}
+   * @param subscriptionId Subscription identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getSubscription(subscriptionId: string) {
-    if (!subscriptionId || typeof subscriptionId !== 'string') {
-      throw new Error('subscriptionId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/subscription/${subscriptionId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get subscription: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(subscriptionId, 'subscriptionId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/subscription/${subscriptionId}`,
+      'Failed to get subscription'
+    );
   }
 
   /**
@@ -321,20 +304,16 @@ export class NotificationApi {
   /**
    * Get a topic
    * Endpoint: GET /topic/{topic_id}
+   * @param topicId Topic identifier.
    * @throws Error if required parameters are missing or invalid
    */
   async getTopic(topicId: string) {
-    if (!topicId || typeof topicId !== 'string') {
-      throw new Error('topicId is required and must be a string');
-    }
-
-    try {
-      return await this.client.get(`${this.basePath}/topic/${topicId}`);
-    } catch (error) {
-      throw new Error(
-        `Failed to get topic: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    assertRequiredString(topicId, 'topicId');
+    return await getPathWithContextError(
+      this.client,
+      `${this.basePath}/topic/${topicId}`,
+      'Failed to get topic'
+    );
   }
 
   /**

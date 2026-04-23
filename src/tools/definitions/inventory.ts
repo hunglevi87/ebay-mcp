@@ -30,17 +30,8 @@ import {
   bulkOfferResponseSchema,
   bulkPublishResponseSchema,
 } from '@/schemas/inventory-management/inventory.js';
-import { OutputArgs, ToolAnnotations } from '../tool-definitions.js';
+import type { OutputArgs, ToolDefinition } from '../tool-definitions.js';
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, z.ZodTypeAny>;
-  title?: string;
-  outputSchema?: OutputArgs;
-  annotations?: ToolAnnotations;
-  _meta?: Record<string, unknown>;
-}
 export const inventoryTools: ToolDefinition[] = [
   {
     name: 'ebay_get_inventory_items',

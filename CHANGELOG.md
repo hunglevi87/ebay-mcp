@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **API Status Docs** — Refreshed API status snapshot documentation in 5 post-`v1.8.5` pushes (`[skip ci]` docs-only updates)
+
+## [1.8.5] - 2026-03-21
+
+### Changed
+
+- **Dependencies** — Bumped `fast-xml-parser` to pull latest fixes and compatibility updates
+
+## [1.8.4] - 2026-03-16
+
+### Changed
+
+- **Dependencies** — Bumped `npm_and_yarn` grouped dependencies (2 updates)
+
+## [1.8.3] - 2026-03-16
+
+### Changed
+
+- **CI** — Skip CI runs for Dependabot PRs to reduce redundant workflow usage
+
+## [1.8.2] - 2026-03-16
+
+### Fixed
+
+- **Lockfile** — Updated `pnpm-lock.yaml` for `grimoire-wizard` dependency replacement (migrating from `prompts`)
+
+## [1.8.1] - 2026-03-16
+
+### Added
+
+- **Setup Wizard** — Replaced interactive setup flow with `grimoire-wizard@0.6.0`
+- **Setup UX** — Added "Powered by grimoire-wizard" subtitle in eBay blue branding
+
+### Changed
+
+- **CI/Release** — Added automated release workflow and integrated conventional-commit-driven version bumping
+
+### Fixed
+
+- **Setup UX** — Prevented spinner spam inside clack frame
+- **Credentials Flow** — Added fallback to existing config when password input is intentionally left empty
+- **Setup UI** — Restored full original setup UI elements (logo, welcome screen, showBox, quick mode, completion summary)
+
+## [1.7.9] - 2026-03-16
+
+### Added
+
+- **Docs** — Added `llms.txt` for LLM/client metadata and guidance
+
+## [1.7.8] - 2026-03-16
+
+### Changed
+
+- **Changelog** — Updated release notes for `v1.7.3` through `v1.7.6`
+
+## [1.7.7] - 2026-03-16
+
+### Added
+
+- **README** — Added contributor avatars widget
+
 ## [1.7.6] - 2026-03-16
 
 ### Changed
@@ -78,6 +141,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Client** - Apply default marketplace/language headers on all requests
 - **Auto-Setup & Diagnostics** - Include marketplace/language values in generated configs and status output
 
+## [1.7.1] - 2026-02-05
+
+### Fixed
+
+- **Security** - Upgraded `fast-xml-parser` to `5.3.4` to address a known security vulnerability (CVE-related dependency fix)
+
+## [1.7.0] - 2026-02-05
+
+### Added
+
+- **API Monitoring** - Added `ebay_get_api_status` tool for eBay API health/status visibility
+
+## [1.6.4] - 2026-02-04
+
+### Fixed
+
+- **OAuth URL Structure** - Corrected eBay OAuth URL shape (`signin` + `auth2/consents`) to match eBay auth expectations
+
 ## [1.6.3] - 2026-02-04
 
 ### Fixed
@@ -94,6 +175,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **HTTP Server** - Initialize API client before tool execution
 - **Setup CLI** - Add setup command entry point with proper error handling
 - **STDIO Server** - Serve icons with proper file:// URLs
+
+## [1.6.0] - 2026-01-09
+
+### Added
+
+- **AI Client Integrations** - Added support for 6 new AI client integrations
+
+## [1.5.1] - 2026-01-08
+
+### Fixed
+
+- **Dependency Compatibility** - Pinned MCP SDK and `zod` to v3-compatible versions to keep schema tooling stable
 
 ## [1.5.0] - 2025-01-08
 
@@ -162,7 +255,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **README Updated** - Updated tool count from 230+ to 275+ tools
 
-## [1.4.2] - 2025-01-16
+## [1.4.1] - 2025-11-14
+
+### Added
+
+- **Setup UX** - Enhanced interactive setup with stronger validation and auto-configuration flow
+- **Identity Validation** - Added real-time user identity verification in setup wizard
+- **Branding Assets** - Added new icon assets for MCP server distribution
+- **Tooling** - Added `download-specs` script and reorganized type-generation scripting layout
+
+### Fixed
+
+- **Token Input** - Auto-strips surrounding quotes from pasted refresh tokens
+- **Client/Server Integration** - Applied reliability fixes in client/server wiring and setup behavior
+- **Dependabot Config** - Corrected configuration and label handling issues
+
+## [1.4.2] - 2025-01-16 (untagged changelog entry)
 
 ### Fixed
 
@@ -306,7 +414,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TODO.md Updates**: Marked eDelivery MCP tools and Zod schemas as complete
 - **CLAUDE.md Updates**: Moved completed tasks to "Recent Completed Tasks" section
 
-## [1.2.2] - 2025-01-13
+## [1.2.2] - 2025-01-13 (untagged changelog entry)
 
 ### Added
 
@@ -346,7 +454,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Troubleshooting Documentation**: Added section for MCP client token issues
 - **Token Persistence Clarity**: Clarified the difference between `.env` token persistence vs MCP tool memory-only tokens
 
-## [1.2.1] - 2025-01-13
+## [1.2.1] - 2025-01-13 (untagged changelog entry)
 
 ### Fixed
 
@@ -447,6 +555,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD Optimization**: Simplified GitHub Actions workflow by removing redundant lint checks
   - Main CI workflow still runs typecheck, tests, and builds
   - Developers encouraged to use `npm run check` locally before pushing
+
+## [1.1.6] - 2025-11-12
+
+### Changed
+
+- **CI** - Updated GitHub workflows to use `pnpm@10`
+
+## [1.1.5] - 2025-11-12
+
+### Changed
+
+- **Package Size** - Optimized package footprint by ~53% (from ~7.6MB to ~3.6MB)
+- **README** - Added npm downloads, bundle size, and CI status badges
 
 ## [1.1.4] - 2025-01-12
 

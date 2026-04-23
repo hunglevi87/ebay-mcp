@@ -1,4 +1,5 @@
 import type { TradingApiClient } from '@/api/client-trading.js';
+import { isRecord } from '@/utils/type-guards.js';
 
 interface ListingSummary {
   itemId: string;
@@ -15,6 +16,21 @@ interface ActiveListingsResult {
   listings: ListingSummary[];
   total: number;
   totalPages: number;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) ? value : undefined;
+}
+
+function asRecordArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (entry): entry is Record<string, unknown> =>
+      typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+  );
 }
 
 export class TradingApi {
@@ -34,21 +50,18 @@ export class TradingApi {
       },
     });
 
-    const activeList = result.ActiveList as Record<string, unknown> | undefined;
-    const itemArray = activeList?.ItemArray as Record<string, unknown> | null;
-    const items = (itemArray?.Item as Record<string, unknown>[]) || [];
-    const pagination = activeList?.PaginationResult as
-      | Record<string, unknown>
-      | undefined;
+    const activeList = asRecord(result.ActiveList);
+    const itemArray = asRecord(activeList?.ItemArray);
+    const items = asRecordArray(itemArray?.Item);
+    const pagination = asRecord(activeList?.PaginationResult);
 
     const listings: ListingSummary[] = items.map((item) => {
-      const sellingStatus = item.SellingStatus as
-        | Record<string, unknown>
-        | undefined;
-      const currentPrice = sellingStatus?.CurrentPrice as
-        | Record<string, unknown>
-        | number
-        | undefined;
+      const sellingStatus = asRecord(item.SellingStatus);
+      const currentPriceRaw = sellingStatus?.CurrentPrice;
+      const currentPrice =
+        typeof currentPriceRaw === 'number' || isRecord(currentPriceRaw)
+          ? currentPriceRaw
+          : undefined;
       const priceValue =
         typeof currentPrice === 'object' && currentPrice !== null
           ? Number(currentPrice['#text'] || 0)
@@ -81,7 +94,7 @@ export class TradingApi {
       DetailLevel: 'ReturnAll',
     });
 
-    const items = result.Item as Record<string, unknown>[];
+    const items = asRecordArray(result.Item);
     return items?.[0] || result;
   }
 

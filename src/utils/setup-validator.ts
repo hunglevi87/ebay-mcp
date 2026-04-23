@@ -9,6 +9,7 @@ import { join } from 'path';
 import chalk from 'chalk';
 import { EbayOAuthClient } from '../auth/oauth.js';
 import { getOAuthAuthorizationUrl } from '../config/environment.js';
+import { parseEnvFile } from './env-parser.js';
 import type { EbayConfig } from '../types/ebay.js';
 
 export interface ValidationResult {
@@ -23,49 +24,6 @@ export interface ValidationSummary {
   passed: number;
   failed: number;
   results: ValidationResult[];
-}
-
-/**
- * Parse .env file manually
- */
-function parseEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!existsSync(filePath)) {
-    return env;
-  }
-
-  const content = readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-
-    // Parse KEY=VALUE
-    const match = /^([^=]+)=(.*)$/.exec(trimmed);
-    if (match) {
-      const key = match[1].trim();
-
-      let value = match[2].trim();
-
-      // Remove quotes if present
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-
-      env[key] = value;
-    }
-  }
-
-  return env;
 }
 
 /**

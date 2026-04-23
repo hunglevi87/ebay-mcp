@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { idSchema } from '../schema-helpers.js';
 
 /**
  * Zod schemas for Notification API input validation
@@ -23,15 +24,6 @@ const continuationTokenSchema = z
     description: 'Token for pagination',
   })
   .optional();
-
-// Reusable schema for ID parameters (required)
-const idSchema = (name: string, description: string) =>
-  z.string({
-    message: `${name} is required`,
-    required_error: `${name.toLowerCase().replace(/\s+/g, '_')} is required`,
-    invalid_type_error: `${name.toLowerCase().replace(/\s+/g, '_')} must be a string`,
-    description,
-  });
 
 // Reusable schema for object data parameters
 const _objectDataSchema = (name: string, description: string) =>

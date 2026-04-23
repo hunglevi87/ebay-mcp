@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { EbaySellerApi } from '@/api/index.js';
 import { getEbayConfig, mcpConfig, validateEnvironmentConfig } from '@/config/environment.js';
+import { runSetup } from '@/scripts/setup.js';
 import { getToolDefinitions, executeTool } from '@/tools/index.js';
 import { serverLogger, toolLogger, getLogPaths } from '@/utils/logger.js';
 import { checkForUpdates } from '@/utils/version.js';
@@ -12,7 +13,6 @@ checkForUpdates({ defer: true });
 const args = process.argv.slice(2);
 if (args.includes('setup')) {
   try {
-    const { runSetup } = await import('./scripts/setup.js');
     await runSetup();
     process.exit(0);
   } catch (error) {
@@ -66,7 +66,7 @@ class EbayMcpServer {
             return {
               content: [
                 {
-                  type: 'text' as const,
+                  type: 'text',
                   text: JSON.stringify(result, null, 2),
                 },
               ],
@@ -78,7 +78,7 @@ class EbayMcpServer {
             return {
               content: [
                 {
-                  type: 'text' as const,
+                  type: 'text',
                   text: JSON.stringify({ error: errorMessage }, null, 2),
                 },
               ],

@@ -749,7 +749,7 @@ Expected: All tests pass
 **Step 3: Smoke test against live eBay**
 
 ```bash
-cd /Users/gpeden/src/ebay-mcp && node -e "
+cd /path/to/ebay-mcp && node -e "
 const dotenv = require('dotenv');
 dotenv.config();
 // ... refresh token, then test getActiveListings via TradingApi
@@ -768,6 +768,6 @@ git push -u origin feat/trading-api
 
 ### Task 7: Create PR to Upstream
 
-Create PR from `longrackslabs/ebay-mcp:feat/trading-api` to `YosefHayim/ebay-mcp:main`.
+Create PR from `<your-fork>/ebay-mcp:feat/trading-api` to `YosefHayim/ebay-mcp:main`.
 
 Include the .env quoting fix from the earlier branch too, or note it as a dependency.
