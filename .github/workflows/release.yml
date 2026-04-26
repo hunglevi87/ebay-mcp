@@ -35,16 +35,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Upgrade npm for OIDC Trusted Publishing
+      - name: Verify npm supports OIDC Trusted Publishing
         run: |
-          npm install -g npm@latest
           test "$(printf '%s\n' "11.5.1" "$(npm -v)" | sort -V | head -1)" = "11.5.1" || {
             echo "::error::npm $(npm -v) is below 11.5.1; trusted publishing is not supported"
             exit 1
