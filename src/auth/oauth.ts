@@ -250,7 +250,7 @@ export class EbayOAuthClient {
 
   /**
    * Exchange authorization code for user access token
-   * Note: After receiving tokens, manually add EBAY_USER_REFRESH_TOKEN to .env file
+   * Persists received tokens to .env automatically
    */
   async exchangeCodeForToken(code: string): Promise<EbayUserToken> {
     if (!this.config.redirectUri) {
@@ -294,8 +294,11 @@ export class EbayOAuthClient {
         scope: tokenData.scope,
       };
 
-      // Tokens are automatically saved to .env file by updateEnvFile()
-      // No console output needed here to avoid interfering with MCP JSON protocol
+      // Persist tokens to .env so they survive process restarts.
+      updateEnvFile({
+        EBAY_USER_ACCESS_TOKEN: tokenData.access_token,
+        EBAY_USER_REFRESH_TOKEN: tokenData.refresh_token,
+      });
 
       return tokenData;
     } catch (error) {
@@ -363,13 +366,9 @@ export class EbayOAuthClient {
         EBAY_USER_ACCESS_TOKEN: tokenData.access_token,
       };
 
-      // If eBay provided a new refresh token, update it too
-      if (
-        tokenData.refresh_token &&
-        tokenData.refresh_token !== process.env.EBAY_USER_REFRESH_TOKEN
-      ) {
-        envUpdates.EBAY_USER_REFRESH_TOKEN = tokenData.refresh_token;
-        // New refresh token updated silently
+      // Reconcile .env with the authoritative in-memory refresh token.
+      if (this.userTokens.userRefreshToken !== process.env.EBAY_USER_REFRESH_TOKEN) {
+        envUpdates.EBAY_USER_REFRESH_TOKEN = this.userTokens.userRefreshToken;
       }
 
       // Write updates to .env file

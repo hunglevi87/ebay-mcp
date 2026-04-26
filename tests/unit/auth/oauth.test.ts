@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import nock from 'nock';
+import dotenv from 'dotenv';
+import * as fs from 'fs';
+import type * as FsModule from 'fs';
+import { mkdtempSync, promises as fsPromises, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
 import { EbayOAuthClient } from '../../../src/auth/oauth.js';
 import type { EbayConfig, StoredTokenData } from '../../../src/types/ebay.js';
 import { getAuthUrl } from '../../../src/config/environment.js';
@@ -9,6 +15,15 @@ import {
   createFullyExpiredTokens,
 } from '../../helpers/mock-token-storage.js';
 import { mockOAuthTokenEndpoint, cleanupMocks } from '../../helpers/mock-http.js';
+
+vi.mock('fs', async () => {
+  const actual = await vi.importActual<typeof FsModule>('fs');
+
+  return {
+    ...actual,
+    writeFileSync: vi.fn(),
+  };
+});
 
 describe('EbayOAuthClient', () => {
   let oauthClient: EbayOAuthClient;
@@ -305,6 +320,128 @@ describe('EbayOAuthClient', () => {
 
     it('should return false when no tokens are available', () => {
       expect(oauthClient.isAuthenticated()).toBe(false);
+    });
+  });
+
+  describe('OAuth token persistence (issues #113, #114)', () => {
+    let originalCwd: string;
+    let tempDir: string;
+
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+
+    /**
+     * Locate the most recent fs.writeFileSync call targeting `.env`
+     * and return its parsed content. Used to verify token persistence.
+     */
+    const getLastEnvWrite = (): {
+      filePath: string;
+      content: string;
+      parsed: Record<string, string>;
+    } => {
+      const envWrite = [...writeFileSyncMock.mock.calls]
+        .reverse()
+        .find(([filePath]) => String(filePath).endsWith(`${path.sep}.env`));
+
+      expect(envWrite).toBeDefined();
+
+      const [filePath, content] = envWrite!;
+      expect(String(filePath)).toMatch(/[\\/]\.env$/);
+      expect(typeof content).toBe('string');
+
+      const envContent = content as string;
+      return {
+        filePath: String(filePath),
+        content: envContent,
+        parsed: dotenv.parse(envContent),
+      };
+    };
+
+    beforeEach(() => {
+      originalCwd = process.cwd();
+      tempDir = mkdtempSync(path.join(tmpdir(), 'ebay-oauth-persistence-'));
+      process.chdir(tempDir);
+      writeFileSyncMock.mockClear();
+    });
+
+    afterEach(() => {
+      process.chdir(originalCwd);
+      rmSync(tempDir, { recursive: true, force: true });
+      writeFileSyncMock.mockClear();
+      delete process.env.EBAY_USER_REFRESH_TOKEN;
+      delete process.env.EBAY_USER_ACCESS_TOKEN;
+    });
+
+    it('exchangeCodeForToken persists both access and refresh tokens to .env (issue #113)', async () => {
+      mockOAuthTokenEndpoint('sandbox', {
+        access_token: 'AT1',
+        token_type: 'Bearer',
+        expires_in: 7200,
+        refresh_token: 'RT1',
+        refresh_token_expires_in: 47304000,
+      });
+
+      await oauthClient.exchangeCodeForToken('auth_code');
+
+      const envWrite = getLastEnvWrite();
+      expect(envWrite.content).toContain('EBAY_USER_ACCESS_TOKEN=AT1');
+      expect(envWrite.content).toContain('EBAY_USER_REFRESH_TOKEN=RT1');
+    });
+
+    it('refreshUserToken persists in-memory refresh token to .env even when eBay omits refresh_token (issue #114)', async () => {
+      process.env.EBAY_USER_REFRESH_TOKEN = 'stale_env_refresh';
+      oauthClient.setUserTokens('old_access_token', 'in_memory_refresh');
+      writeFileSyncMock.mockClear();
+
+      mockOAuthTokenEndpoint('sandbox', {
+        access_token: 'new_access_token',
+        expires_in: 7200,
+      });
+
+      await oauthClient.refreshUserToken();
+
+      const envWrite = getLastEnvWrite();
+      expect(envWrite.parsed.EBAY_USER_ACCESS_TOKEN).toBe('new_access_token');
+      expect(envWrite.parsed.EBAY_USER_REFRESH_TOKEN).toBe('in_memory_refresh');
+      expect(envWrite.parsed.EBAY_USER_REFRESH_TOKEN).not.toBe('stale_env_refresh');
+    });
+
+    it('refreshUserToken persists same refresh token when in-memory differs from env (issue #114, no rotation case)', async () => {
+      process.env.EBAY_USER_REFRESH_TOKEN = 'old_env_refresh';
+      oauthClient.setUserTokens('old_access_token', 'fresh_oauth_refresh');
+      writeFileSyncMock.mockClear();
+
+      mockOAuthTokenEndpoint('sandbox', {
+        access_token: 'new_access_token',
+        expires_in: 7200,
+        refresh_token: 'fresh_oauth_refresh',
+      });
+
+      await oauthClient.refreshUserToken();
+
+      const envWrite = getLastEnvWrite();
+      expect(envWrite.parsed.EBAY_USER_ACCESS_TOKEN).toBe('new_access_token');
+      expect(envWrite.parsed.EBAY_USER_REFRESH_TOKEN).toBe('fresh_oauth_refresh');
+    });
+
+    it('refreshUserToken does NOT rewrite refresh token when in-memory matches env', async () => {
+      process.env.EBAY_USER_REFRESH_TOKEN = 'same_refresh';
+      await fsPromises.writeFile(
+        path.join(tempDir, '.env'),
+        'EBAY_USER_REFRESH_TOKEN=same_refresh\nEBAY_USER_ACCESS_TOKEN=old_access\n'
+      );
+      oauthClient.setUserTokens('old_access_token', 'same_refresh');
+      writeFileSyncMock.mockClear();
+
+      mockOAuthTokenEndpoint('sandbox', {
+        access_token: 'new_access_token',
+        expires_in: 7200,
+      });
+
+      await oauthClient.refreshUserToken();
+
+      const envWrite = getLastEnvWrite();
+      expect(envWrite.parsed.EBAY_USER_ACCESS_TOKEN).toBe('new_access_token');
+      expect(envWrite.parsed.EBAY_USER_REFRESH_TOKEN).toBe('same_refresh');
     });
   });
 });
