@@ -42,13 +42,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify npm supports OIDC Trusted Publishing
-        run: |
-          test "$(printf '%s\n' "11.5.1" "$(npm -v)" | sort -V | head -1)" = "11.5.1" || {
-            echo "::error::npm $(npm -v) is below 11.5.1; trusted publishing is not supported"
-            exit 1
-          }
-
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -167,9 +160,9 @@ jobs:
             -m "Release ${{ steps.version.outputs.tag }} - ${{ steps.desc.outputs.title }}"
           git push origin main --follow-tags
 
-      - name: Publish to npm
-        if: steps.skip_check.outputs.skip != 'true'
-        run: pnpm publish --no-git-checks --access public --provenance
+      # npm publish is handled by .github/workflows/publish.yml (triggered via
+      # workflow_run after this Release completes). The workflow filename split
+      # is required for OIDC trusted-publisher matching on the ebay-mcp package.
 
       - name: Create GitHub Release
         if: steps.skip_check.outputs.skip != 'true'
